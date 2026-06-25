@@ -88,9 +88,17 @@ export default function App() {
 
   // Handle local database updates
   const handleUpdateDb = async (newDb, auditMessage = "") => {
-    setDb(newDb);
+    const updatedDb = {
+      ...newDb,
+      meta: {
+        ...(newDb.meta || {}),
+        version: (newDb.meta?.version || 1) + 1,
+        last_updated: new Date().toISOString()
+      }
+    };
+    setDb(updatedDb);
     // 1. Save locally and flag as dirty
-    await saveDbLocally(newDb, true);
+    await saveDbLocally(updatedDb, true);
     
     // 2. Try to sync immediately in background
     if (syncState.online) {

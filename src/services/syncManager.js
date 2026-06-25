@@ -313,6 +313,55 @@ export async function syncWithTelegram() {
         triggerSyncStatusChange();
         return { status: 'synced_pulled', db: localDb };
       }
+    } else if (serverVer === localVer && serverMeta && lastSyncedFileUpdatedAt !== serverMeta.updated_at) {
+      // Versions are equal but file metadata has changed, indicating another device updated the server file.
+      if (isDirty && !isLocalEmpty) {
+        console.log(`Metadata changed with equal versions (${serverVer}). Merging databases...`);
+        const mergedDb = mergeDatabases(localDb, serverDb);
+        // Ensure version is incremented to trigger other devices to pull
+        mergedDb.meta.version = serverVer + 1;
+        
+        localDb = mergedDb;
+        const uploadedDb = await uploadMasterDbToSupabase(localDb);
+        localDb = uploadedDb;
+        isDirty = false;
+
+        const newMeta = await fetchMasterDbMetadataFromSupabase();
+        if (newMeta) {
+          lastSyncedFileId = newMeta.id;
+          lastSyncedFileUpdatedAt = newMeta.updated_at;
+        }
+
+        await localforage.setItem('clinic_db', localDb);
+        await localforage.setItem('is_dirty', isDirty);
+        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
+        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+
+        triggerSyncStatusChange();
+        return { status: 'synced_pushed', db: localDb };
+      } else {
+        console.log(`Metadata changed with equal versions (${serverVer}). Pulling server changes...`);
+        const localSettings = localDb.settings || {};
+        localDb = {
+          ...serverDb,
+          settings: {
+            ...serverDb.settings,
+            ...localSettings
+          }
+        };
+        isDirty = false;
+        
+        lastSyncedFileId = serverMeta.id;
+        lastSyncedFileUpdatedAt = serverMeta.updated_at;
+        
+        await localforage.setItem('clinic_db', localDb);
+        await localforage.setItem('is_dirty', isDirty);
+        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
+        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+
+        triggerSyncStatusChange();
+        return { status: 'synced_pulled', db: localDb };
+      }
     } else if (isDirty) {
       // Server is same or older, and we have local edits. Push our changes.
       console.log(`Pushing local edits to Supabase. Local version: ${localVer}`);
