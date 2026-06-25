@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bassma-clinic-cache-v1';
+const CACHE_NAME = 'bassma-clinic-cache-v3';
 
 self.addEventListener('install', (event) => {
   // Force activation immediately
