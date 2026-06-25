@@ -100,24 +100,25 @@ export default function App() {
     // 1. Save locally and flag as dirty
     await saveDbLocally(updatedDb, true);
     
-    // 2. Try to sync immediately in background
+    // 2. Try to sync immediately in background (non-blocking)
     if (syncState.online) {
-      try {
-        setIsSyncing(true);
-        await syncWithTelegram();
-        setIsSyncing(false);
-        setDb({ ...getDb() });
-
-        // Post audit log to Telegram bot
-        if (auditMessage) {
-          const token = newDb.settings?.telegram_bot_token;
-          const chatId = newDb.settings?.telegram_chat_id;
-          await sendAuditLog(token, chatId, auditMessage);
-        }
-      } catch (err) {
-        console.error("Auto sync failed:", err);
-        setIsSyncing(false);
-      }
+      setIsSyncing(true);
+      syncWithTelegram()
+        .then(() => {
+          setIsSyncing(false);
+          setDb({ ...getDb() });
+          
+          // Post audit log to Telegram bot
+          if (auditMessage) {
+            const token = updatedDb.settings?.telegram_bot_token;
+            const chatId = updatedDb.settings?.telegram_chat_id;
+            sendAuditLog(token, chatId, auditMessage).catch(e => console.warn("Background audit log failed:", e.message));
+          }
+        })
+        .catch(err => {
+          console.error("Auto sync failed:", err);
+          setIsSyncing(false);
+        });
     }
   };
 

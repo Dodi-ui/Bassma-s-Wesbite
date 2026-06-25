@@ -259,51 +259,46 @@ button, input, select, textarea {
 
 /* ==================== PRINT STYLING ==================== */
 @media print {
-  body {
+  html, body {
     background: #FFFFFF !important;
     color: #000000 !important;
     font-size: 10pt !important;
     margin: 0 !important;
     padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  nav,
-  header,
-  .print\:hidden,
-  .sticky,
-  button,
-  input,
-  select,
-  textarea {
-    display: none !important;
+  /* Hide all elements on the page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the report container and its contents */
+  .print-report, .print-report * {
+    visibility: visible;
   }
 
   .print-report {
-    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 100% !important;
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
-    padding: 10mm 15mm !important;
-    background: transparent !important;
+    padding: 5mm 5mm !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
   }
 
   table, tr, td, th {
     page-break-inside: avoid !important;
+    border-color: #CBD5E1 !important;
   }
   
   thead {
     display: table-header-group !important;
-  }
-
-  .grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-  }
-  
-  .grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   * {
