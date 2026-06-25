@@ -450,7 +450,7 @@ export default function SettingsScreen({ db, onUpdateDb, onLogout }) {
               إذا كنت تفضل تثبيت التطبيق كملف APK مستقل على جهازك أو أجهزة المساعدين، يمكنك تحميله مباشرة من هنا:
             </p>
             <a
-              href="/bassma-clinic.apk"
+              href="bassma-clinic.apk"
               download="bassma-clinic.apk"
               className="py-2.5 px-4 bg-white border border-clinic-teal text-clinic-teal font-bold rounded-xl active:scale-95 text-xs flex items-center justify-center gap-2 transition-all shadow-sm hover:bg-clinic-teal hover:text-white"
             >
