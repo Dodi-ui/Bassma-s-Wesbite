@@ -1,0 +1,611 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    DR. BASSMA'S CLINIC — FULL PROJECT PROMPT
+                         (Mobile-First Internal Patient Tool)
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT: Bassma's Clinic Internal Tool
+DEADLINE: August 20
+PRIMARY USER: Dr. Bassma (Pulmonologist) + 2 Assistants (3 total users)
+DEVICE TARGET: Android Phones (Mother + Assistant)
+OUTPUT FORMAT: Android APK (installable) OR Windows EXE (for desktop backup)
+LANGUAGE: Arabic (Egyptian/Saidi) primary ~90%, English medical terms mixed
+PRIORITY: Crystal-clear UX over visual polish. Phone-first. Simplest of all sites.
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 1: TECH STACK & ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+FRONTEND:
+  • React 18 + Vite (fast builds)
+  • Tailwind CSS (utility-first, fast styling)
+  • PWA capabilities (service worker, manifest.json)
+  • Capacitor (to wrap into Android APK) OR Tauri (for Windows EXE)
+  • RTL layout for Arabic (dir="rtl")
+
+BACKEND (DATABASE & MESSAGING):
+  • Telegram Bot API — THE PRIMARY BACKEND
+    - All patient records stored as a master JSON file in a private Telegram channel
+    - Real-time sync via Telegram messages
+    - Zero database hosting cost, extremely reliable uptime
+    - Natural audit trail (every action logged as a message)
+
+FILE STORAGE:
+  • Supabase Storage — USED ONLY FOR:
+    - Prescription photos (JPEG/PNG)
+    - Voice memo audio files (MP3/OGG)
+    - Generated PDF reports (daily/monthly)
+  • Private buckets with signed URLs
+
+AUTH:
+  • Simple shared PIN/password login (hardcoded or in master JSON)
+  • No email verification, no signup flow
+  • 3 users max: Dr. Bassma + 2 assistants
+
+VOICE-TO-TEXT:
+  • Free-tier API supporting Egyptian SAIDI dialect (صعيدي)
+  • Options: AssemblyAI, Deepgram, Google Cloud Speech (free tier), Whisper
+  • Fallback: Browser-native webkitSpeechRecognition (ar-EG locale)
+
+PDF GENERATION:
+  • jsPDF + autoTable for reports
+  • html2canvas for any visual charts
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 2: DESIGN OUTLINE (VISUAL DESCRIPTION)
+═══════════════════════════════════════════════════════════════════════════════
+
+OVERALL AESTHETIC:
+  • Clean, clinical, uncluttered. White/off-white background.
+  • Large, thumb-friendly buttons (min 56px height).
+  • High contrast text (dark gray on white) for bright clinic lighting.
+  • No gradients, no animations that slow down entry. Flat design.
+  • RTL layout: everything flows right-to-left.
+
+COLOR PALETTE:
+  • Primary: Deep Teal (#0D7377) — medical, calm, professional
+  • Secondary: Soft Mint (#A8E6CF) — for success states, open day
+  • Accent: Warm Coral (#FF6B6B) — for alerts, close day, delete
+  • Background: Off-White (#FAFAFA)
+  • Cards: Pure White (#FFFFFF) with subtle shadow
+  • Text: Dark Charcoal (#2C3E50)
+
+TYPOGRAPHY:
+  • Arabic font: "Noto Sans Arabic" or "Cairo" (Google Fonts) — clear, readable
+  • English font: "Inter" or system sans-serif
+  • Large base size: 16px minimum, headings 20–24px
+
+SCREEN-BY-SCREEN DESIGN:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 1: LOGIN                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Centered logo/clinic name at top                                         │
+│  • Large PIN input (4-6 digits, numeric keypad)                             │
+│  • "دخول" (Enter) button — full width, teal, large                          │
+│  • Error message in red if wrong PIN                                        │
+│  • "نسيت الرقم السري؟" link (for admin reset)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 2: DAY MANAGEMENT (Morning Dashboard)                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Large banner at top showing today's date (Arabic)                        │
+│  • MASSIVE toggle button:                                                   │
+│      [🟢 فتح اليوم]  — Mint green, fills screen width, huge text            │
+│      [🔴 إغلاق اليوم] — Coral red, when day is already open                  │
+│  • Below: quick stats cards (patients today, total income today)            │
+│  • Bottom nav: [اليوم] [بحث] [تقارير] [إعدادات]                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 3: NEW PATIENT FORM (The Core Screen)                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Sticky header: "مريض جديد" + back arrow                                  │
+│  • Form fields stacked vertically, full width, large padding:               │
+│                                                                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ الاسم ثلاثي *                           │  ← Required, large input      │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ السن (رقم أو كتابة) *                   │  ← Text input, accepts both │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ البلد / القرية *                        │  ← Text input                 │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ رقم التلفون (مش شرط)                    │  ← Optional, helper text    │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ المدفوع بالظبط (ج.م) *                  │  ← Number input, EGP symbol   │
+│    └─────────────────────────────────────────┘                               │
+│                                                                               │
+│  • VOICE SECTION:                                                           │
+│    [🎙️  اضغط وسجل الشكوى] — Huge rounded button, teal, mic icon            │
+│    After recording: waveform animation → [🔁 أعد المحاولة] [✓ تمام]         │
+│    Transcribed text appears in large editable textarea below                │
+│                                                                               │
+│  • PHOTO SECTION:                                                           │
+│    [📷 صور الروشتة] — Large button, opens camera directly                   │
+│    After capture: thumbnail strip, tap to enlarge/delete                  │
+│                                                                               │
+│  • MEDICAL FIELDS:                                                          │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ التشخيص                                 │  ← Textarea                  │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ الأدوية                                 │  ← Textarea                  │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ قراءات وظائف الرئة                      │  ← Textarea                  │
+│    └─────────────────────────────────────────┘                               │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ موعد المتابعة                           │  ← Date picker (native)      │
+│    └─────────────────────────────────────────┘                               │
+│                                                                               │
+│  • ACTION BUTTONS (sticky at bottom):                                       │
+│    [حفظ] [حفظ وجديد] — Both teal, side by side or stacked                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 4: PATIENT SEARCH                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Sticky search bar at very top: 🔍 + "ابحث بالاسم أو القرية أو التلفون..." │
+│  • Filter chips below search bar: [الكل] [بالاسم] [بالقرية] [بالتاريخ]      │
+│  • Results as scrollable cards:                                             │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ محمد أحمد عبدالله                       │                               │
+│    │ ٤٥ سنة · القرنة · آخر زيارة: ٢٥/٦      │                               │
+│    │ مدفوع: ٢٥٠ ج.م                          │                               │
+│    └─────────────────────────────────────────┘                               │
+│  • Tap card → opens Patient Profile                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 5: PATIENT PROFILE / HISTORY                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Header: Patient name (large), age, village                              │
+│  • Scrollable timeline of visits (newest first):                            │
+│    ┌─────────────────────────────────────────┐                               │
+│    │ 📅 ٢٥ يونيو ٢٠٢٦                       │                               │
+│    │ الشكوى: مش قادر اتنفس كويس             │                               │
+│    │ التشخيص: ربو مزمن                      │                               │
+│    │ 💰 ٢٥٠ ج.م  |  🖼️ صورة الروشتة        │                               │
+│    │ [تعديل] [حذف]                          │                               │
+│    └─────────────────────────────────────────┘                               │
+│  • Tap any visit → full detail modal                                        │
+│  • Tap prescription thumbnail → full-screen image viewer                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 6: END-OF-DAY REPORT (تقرير نهاية اليوم)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Header: "تقرير يوم ٢٥ يونيو ٢٠٢٦"                                       │
+│  • Summary cards: إجمالي المرضى | إجمالي الدخل                             │
+│  • Table (scrollable horizontally if needed):                                │
+│    ┌──────────────┬─────────────┬────────────┐                               │
+│    │ الاسم        │ المبلغ      │ القرية     │                               │
+│    ├──────────────┼─────────────┼────────────┤                               │
+│    │ محمد أحمد   │ ٢٥٠ ج.م    │ القرنة     │                               │
+│    │ ...          │ ...         │ ...        │                               │
+│    └──────────────┴─────────────┴────────────┘                               │
+│  • Bottom buttons: [📄 تحميل PDF] [📤 مشاركة] [📤 إرسال لتلجرام]            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 7: MONTHLY REPORT (تقرير الشهر)                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Month selector dropdown (e.g., "يونيو ٢٠٢٦")                            │
+│  • Summary cards:                                                           │
+│    - أيام العمل المفتوحة: ٢٢                                                │
+│    - إجمالي المرضى: ١٤٥                                                    │
+│    - إجمالي الإيرادات: ٣٦,٢٥٠ ج.م                                          │
+│    - متوسط المرضى يومياً: ٦.٥                                               │
+│  • Daily breakdown table (date | patients | revenue | status)              │
+│  • [📄 تحميل PDF] [📤 إرسال لتلجرام] buttons                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SCREEN 8: SETTINGS (إعدادات)                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • Telegram Bot Token input (masked, admin only)                            │
+│  • Channel Chat ID input                                                    │
+│  • Supabase URL + Anon Key inputs                                            │
+│  • Voice-to-Text API Key input (dropdown to select provider)                │
+│  • Change PIN option                                                        │
+│  • [🔄 مزامنة يدوية] — Force re-download master JSON                        │
+│  • [🚪 تسجيل خروج]                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+BOTTOM NAVIGATION BAR (persistent on all screens except login/form):
+  ┌─────────┬─────────┬─────────┬─────────┐
+  │  اليوم  │  بحث    │ تقارير  │ إعدادات │
+  │ (Home)  │(Search) │(Reports)│(Settings)│
+  └─────────┴─────────┴─────────┴─────────┘
+  • Icons + Arabic labels
+  • Active tab highlighted in teal
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 3: CORE FEATURES (DETAILED)
+═══════════════════════════════════════════════════════════════════════════════
+
+3.1 DAY MANAGEMENT
+  • First screen after login every morning
+  • "فتح اليوم" button: mint green, massive, impossible to miss
+  • "إغلاق اليوم" button: coral red, confirms with dialog
+  • Day status stored in master JSON + broadcast to Telegram channel
+  • If day is CLOSED: new patient form is disabled (grayed out with message)
+  • Read-only access to past records always available
+
+3.2 NEW PATIENT VISIT FORM
+  • All fields listed in Design Outline above
+  • Voice memo flow:
+    1. Press and hold OR tap to start recording
+    2. Real-time waveform animation
+    3. Stop → upload audio to Supabase Storage
+    4. Send audio to Voice-to-Text API (Saidi dialect)
+    5. Show loading spinner: "جاري التفريغ..."
+    6. Display text in editable textarea
+    7. [🔁 أعد المحاولة] if transcription is garbage
+    8. [✓ تمام] to confirm and lock
+  • Prescription photo flow:
+    1. Tap camera button → native camera opens (rear camera default)
+    2. Capture → immediate thumbnail preview
+    3. Option to retake or add more photos
+    4. On save: upload to Supabase Storage, URL saved in record
+  • Payment field:
+    - Numeric keypad
+    - Always show "ج.م" suffix
+    - Must accept decimals (e.g., 250.50)
+  • Save actions:
+    - "حفظ" → save, return to today's patient list
+    - "حفظ وجديد" → save, clear form, stay on form for next patient
+
+3.3 PATIENT SEARCH & FILTER
+  • Real-time search from locally cached master JSON
+  • Searchable fields: full_name, village, phone, complaint_text, date
+  • Filter chips: All | By Name | By Village | By Date
+  • Results sorted by last visit date (newest first)
+  • Empty state: "مفيش نتائج" with magnifying glass icon
+
+3.4 PATIENT PROFILE / HISTORY
+  • Tap search result → full profile
+  • Chronological visit timeline (newest first)
+  • Each visit card shows: date, complaint preview, amount, prescription thumbnail
+  • Tap visit → detail modal with ALL fields
+  • Tap prescription → full-screen image viewer with pinch-to-zoom
+  • Edit button: opens pre-filled form, updates master JSON on save
+  • Delete button: confirmation dialog, soft delete (mark as deleted but keep in JSON)
+
+3.5 END-OF-DAY REPORT
+  • Accessible from Reports tab or floating button on home screen
+  • Generates ONLY for days that were explicitly OPENED
+  • Content:
+    - Date
+    - Total patients count
+    - Total revenue (sum of amount_paid)
+    - Table: Name | Amount Paid | Village
+    - NO photos, NO voice memos, NO medical details
+  • PDF generated client-side via jsPDF
+  • PDF uploaded to Supabase Storage
+  • Telegram Bot sends PDF link to private channel
+  • Share button uses Web Share API (if supported) or copies link
+
+3.6 MONTHLY REPORT
+  • Month picker (dropdown or scroll wheel)
+  • Aggregates all OPEN days in that month
+  • Content:
+    - Days opened vs. closed
+    - Total patients
+    - Total revenue
+    - Average patients per day
+    - Daily breakdown table
+  • Same PDF + Telegram flow as daily report
+
+3.7 TELEGRAM BACKEND ARCHITECTURE
+  • Master Database: A file named "clinic_db.json" pinned in the private channel
+  • Channel members: Bot + Dr. Bassma + 2 assistants
+  • Bot permissions: read messages, send messages, send files
+  • Data flow:
+    1. App loads → fetches latest pinned JSON from channel
+    2. User makes change → app updates local state
+    3. App generates new JSON → sends as document to channel
+    4. App pins the new JSON (unpins old one)
+    5. App sends a human-readable summary message for audit
+  • Redundancy: Every new visit also posts a short text summary to channel
+  • Multi-user sync: Poll channel every 30 seconds for newer JSON version
+    - If newer version detected → show banner: "يوجد تحديث من مستخدم آخر. إعادة تحميل؟"
+    - On confirm → download new JSON, merge local changes if any
+  • Offline queue: If no internet, queue changes in IndexedDB, sync when online
+
+3.8 SUPABASE STORAGE (Files Only)
+  • Bucket 1: "prescriptions" — JPEG/PNG images
+  • Bucket 2: "voice-memos" — MP3/OGG audio
+  • Bucket 3: "reports" — PDF files
+  • All buckets: private, accessed via signed URLs (1-hour expiry)
+  • File naming: {patient_id}_{timestamp}.{ext}
+  • Cleanup: Old signed URLs auto-expire, new ones generated on demand
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 4: DATA STRUCTURE (MASTER JSON)
+═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "meta": {
+    "version": 142,
+    "last_updated": "2026-06-25T10:30:00Z",
+    "updated_by": "Dr. Bassma",
+    "app_version": "1.0.0"
+  },
+  "settings": {
+    "telegram_bot_token": "...",
+    "telegram_chat_id": "...",
+    "supabase_url": "...",
+    "supabase_anon_key": "...",
+    "voice_api_provider": "assemblyai",
+    "voice_api_key": "...",
+    "clinic_pin": "1234"
+  },
+  "days": [
+    {
+      "date": "2026-06-25",
+      "status": "open",
+      "opened_at": "08:00",
+      "opened_by": "Dr. Bassma",
+      "closed_at": null,
+      "total_patients": 12,
+      "total_revenue": 3200.00
+    }
+  ],
+  "patients": [
+    {
+      "id": "uuid-v4",
+      "full_name": "محمد أحمد عبدالله",
+      "age": "٤٥",
+      "village": "القرنة",
+      "phone": "01001234567",
+      "created_at": "2026-06-25T09:00:00Z",
+      "created_by": "Dr. Bassma"
+    }
+  ],
+  "visits": [
+    {
+      "id": "uuid-v4",
+      "patient_id": "uuid-v4",
+      "date": "2026-06-25",
+      "day_status": "open",
+      "complaint_text": "مش قادر اتنفس كويس",
+      "complaint_audio_url": "https://...supabase.../audio.mp3",
+      "diagnosis": "ربو مزمن",
+      "medications": "Ventolin spray 2 puffs every 6 hours",
+      "lung_readings": "FEV1: 70% | FVC: 85%",
+      "follow_up_date": "2026-07-02",
+      "amount_paid": 250.00,
+      "prescription_image_url": "https://...supabase.../img.jpg",
+      "created_at": "2026-06-25T09:15:00Z",
+      "created_by": "Dr. Bassma",
+      "updated_at": null
+    }
+  ]
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 5: OUTPUT FORMAT — APK / EXE
+═══════════════════════════════════════════════════════════════════════════════
+
+Since the app is built as a web app (React), it must be WRAPPED into native
+installers for Dr. Bassma's phone and her assistant's phone.
+
+OPTION A: ANDROID APK (RECOMMENDED for phones)
+  • Tool: Capacitor (by Ionic)
+  • Process:
+    1. Build React app as static files (npm run build)
+    2. npx cap init + npx cap add android
+    3. Copy build files to Android project
+    4. npx cap open android → build signed APK in Android Studio
+  • Result: .apk file installable directly on any Android phone
+  • No Google Play Store needed — sideload via USB or WhatsApp transfer
+  • Camera, microphone, storage permissions handled natively
+
+OPTION B: WINDOWS EXE (for desktop backup/laptop)
+  • Tool: Tauri (Rust-based, very lightweight, ~600KB overhead)
+  • Process:
+    1. Tauri init in the React project
+    2. npm run tauri build
+    3. Output: .exe + .msi installer
+  • Result: Native Windows app that looks like a desktop program
+  • Useful if Dr. Bassma wants to use a laptop for reports
+
+OPTION C: PWA (Progressive Web App)
+  • Always included as fallback
+  • User visits URL in Chrome → "Add to Home Screen"
+  • Works like an app, but requires internet for first load
+  • Good for quick testing before APK build
+
+RECOMMENDED DELIVERY:
+  • Primary: Android APK for both phones
+  • Secondary: Windows EXE for laptop/desktop backup
+  • Tertiary: PWA link for emergency access from any browser
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 6: LIMITATIONS & MITIGATION STRATEGIES
+═══════════════════════════════════════════════════════════════════════════════
+
+LIMITATION 1: TELEGRAM BOT API RATE LIMITS
+  • Problem: Telegram limits bots to ~30 messages/second. If 3 users spam
+    actions simultaneously, the bot might be throttled.
+  • Impact: Data sync delays, failed saves.
+  • MITIGATION:
+    - Debounce rapid actions (e.g., don't send on every keystroke)
+    - Batch multiple edits into a single JSON update
+    - Implement a local queue: if Telegram fails, retry with exponential backoff
+    - Show user a "جاري الحفظ..." spinner until confirmation
+    - If rate limit hit, show: "السيرفر مشغول، جاري المحاولة تاني..."
+
+LIMITATION 2: TELEGRAM FILE SIZE LIMITS
+  • Problem: Telegram bots can only send files up to 50MB. Prescription photos
+    and voice memos might exceed this if high-resolution.
+  • Impact: Failed uploads, lost data.
+  • MITIGATION:
+    - Compress images BEFORE upload (reduce to 1080px width, 80% quality JPEG)
+    - Compress audio to OGG/Opus format (much smaller than MP3)
+    - Use Supabase Storage for the actual files (no size limit on free tier)
+    - Only send file URLs via Telegram, not the files themselves
+    - The master JSON only stores Supabase URLs, keeping it small (< 1MB)
+
+LIMITATION 3: TELEGRAM CHANNEL MESSAGE HISTORY LIMITS
+  • Problem: Telegram channels can hold unlimited messages, but fetching/pinning
+    might behave unexpectedly with very large channels.
+  • Impact: Difficulty finding the pinned master JSON.
+  • MITIGATION:
+    - Keep the channel CLEAN: only the bot posts, no chatter
+    - Pin ONLY the latest JSON file, unpin previous ones automatically
+    - Use Telegram's "getChat" API to fetch the pinned message directly
+    - Don't rely on scrolling through history
+    - Consider monthly archive: at month end, save a "clinic_db_2026_06.json"
+      and start a fresh JSON for the new month
+
+LIMITATION 4: NO REAL-TIME COLLABORATION (NO WEBSOCKETS)
+  • Problem: Unlike Firebase or Supabase Realtime, Telegram polling is not
+    instant. Two users editing simultaneously can overwrite each other.
+  • Impact: Data loss (last write wins).
+  • MITIGATION:
+    - Implement versioning: every JSON has a "version" number
+    - Before saving, check if local version == server version
+    - If server is newer: show conflict dialog with diff view
+    - Option: "استخدم نسختك" (overwrite) or "استخدم النسخة الجديدة" (discard yours)
+    - Reduce conflict by design: only one person typically enters data at a time
+    - Reports are read-only, so no conflict there
+
+LIMITATION 5: VOICE-TO-TEXT SAIDI DIALECT ACCURACY
+  • Problem: Most APIs are trained on Modern Standard Arabic (MSA) or Egyptian
+    Cairo dialect. Saidi (Upper Egyptian) has unique vocabulary and pronunciation.
+  • Impact: Garbage transcription, wasted time correcting.
+  • MITIGATION:
+    - Test multiple APIs with real Saidi audio samples BEFORE committing
+    - Primary: AssemblyAI (known for dialect robustness)
+    - Secondary: Whisper fine-tuned on Egyptian dialect data (if possible)
+    - Tertiary: Google Cloud Speech with "ar-EG" locale
+    - ALWAYS allow manual editing of transcribed text
+    - Save the original audio file regardless — transcription is a bonus, not a requirement
+    - If API fails, graceful fallback: save audio only, show warning banner
+
+LIMITATION 6: OFFLINE FUNCTIONALITY
+  • Problem: If the clinic has no internet (common in rural Egypt), the app
+    cannot sync with Telegram or Supabase.
+  • Impact: Cannot save patients, cannot view history.
+  • MITIGATION:
+    - Implement robust offline mode using IndexedDB (local browser storage)
+    - Cache the entire master JSON locally on first load
+    - All reads work offline (search, history, reports)
+    - All writes are queued locally when offline
+    - Show prominent banner: "⚠️ وضع بدون إنترنت — البيانات هتتزامن لما النت يرجع"
+    - Auto-sync queue when connection returns
+    - Background sync using Service Worker (if PWA) or Capacitor background tasks
+
+LIMITATION 7: SUPABASE FREE TIER LIMITS
+  • Problem: Supabase free tier has storage limits (1GB) and bandwidth limits.
+  • Impact: Cannot upload photos if quota exceeded.
+  • MITIGATION:
+    - Compress images aggressively (target < 200KB per prescription photo)
+    - Compress audio (target < 500KB per voice memo)
+    - Set up a monthly cleanup job: archive old photos to local storage or
+      compress them further after 30 days
+    - Monitor usage dashboard
+    - If approaching limit: warn user "مساحة التخزين خلصت، اتواصل مع المبرمج"
+    - Backup plan: Store files locally on phone and sync only URLs to Telegram
+
+LIMITATION 8: APK INSTALLATION ON NON-TECH-SAVVY USERS
+  • Problem: Dr. Bassma and her assistant may not know how to sideload an APK
+    (enable "Unknown Sources", install via file manager).
+  • Impact: Cannot install the app.
+  • MITIGATION:
+    - Provide a step-by-step Arabic guide with screenshots
+    - Use a tool like Diawi or Firebase App Distribution to send install links
+    - Alternatively: just use the PWA (add to home screen) — zero installation
+    - If APK is mandatory: pre-configure the APK so no setup is needed after install
+    - Consider publishing to Google Play Store (one-time $25 fee, but easiest for users)
+
+LIMITATION 9: SHARED PIN SECURITY
+  • Problem: A single shared PIN among 3 users means anyone with the PIN can
+    access all data. No audit of WHO did WHAT.
+  • Impact: Data tampering without accountability.
+  • MITIGATION:
+    - Store "created_by" and "updated_by" fields in every record
+    - Prompt for name selection on login (Dr. Bassma / Assistant 1 / Assistant 2)
+    - This creates an informal audit trail without complex auth
+    - Change PIN monthly via settings
+    - If serious security needed: upgrade to individual PINs (Phase 2)
+
+LIMITATION 10: NO AUTOMATED BACKUPS
+  • Problem: If Telegram channel is deleted or bot token is lost, all data is gone.
+  • Impact: Catastrophic data loss.
+  • MITIGATION:
+    - Monthly: auto-generate a full backup JSON and email it (or send via WhatsApp)
+    - Weekly: export master JSON to a secondary Telegram channel (read-only archive)
+    - Store bot token and chat ID in multiple safe places
+    - Document recovery procedure in Arabic
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 7: DELIVERABLES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. SOURCE CODE
+   • Complete React + Capacitor + Tauri project
+   • Well-commented, especially Telegram API integration
+   • GitHub repository access
+
+2. ANDROID APK
+   • Signed .apk file ready for sideloading
+   • Tested on Android 10+ devices
+
+3. WINDOWS EXE (OPTIONAL)
+   • .exe installer for laptop/desktop use
+   • Same functionality as mobile app
+
+4. SETUP GUIDES (in Arabic)
+   • How to create a Telegram Bot (@BotFather step-by-step with screenshots)
+   • How to create a private channel and get Chat ID
+   • How to set up Supabase project and Storage buckets
+   • How to get free Voice-to-Text API key
+   • How to install APK on Android phone
+
+5. USER MANUAL (in Arabic)
+   • Morning routine: open day → add patients → close day → generate report
+   • How to record voice memos and correct transcription
+   • How to take prescription photos
+   • How to search for old patients
+   • How to generate and share reports
+   • Troubleshooting common issues
+
+6. DEPLOYMENT SUPPORT
+   • One session to walk through setup on Dr. Bassma's phone
+   • One session for the assistant's phone
+   • 2-week bug-fix support period after launch
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 8: QUESTION TO THE BOSS (STAKEHOLDER)
+═══════════════════════════════════════════════════════════════════════════════
+
+بعد الانتهاء من هذا المستند، نحتاج موافقتك على النقاط التالية قبل البدء في التنفيذ:
+
+1. هل توافق على استخدام Telegram كقاعدة بيانات رئيسية (بدلاً من Supabase/PostgreSQL)
+   مع فهم المخاطر والحلول الموضحة في Section 6؟
+
+2. هل تفضل APK للأندرويد فقط، أم تحتاج نسخة iPhone أيضاً؟
+   (iPhone يتطلب حساب مطور Apple بـ ١٠٠ دولار سنوياً)
+
+3. هل لديك حساب Google Cloud / OpenAI / AssemblyAI جاهز للاستخدام المجاني
+   لتجربة خدمات تحويل الصوت لنص؟ وإلا هل تفضل أن نجرب الخيارات المجانية
+   ونختار الأفضل experimentally؟
+
+4. هل توافق على التصميم الموضح في Section 2 (بسيط، بدون تأثيرات، RTL، أزرار كبيرة)
+   أم تريد تعديلات على الألوان أو التخطيط؟
+
+5. هل تحتاج ميزات إضافية غير المذكورة (مثل: رسائل تذكير للمرضى،
+   إحصائيات متقدمة، أو ربط مع صيدلية) — أم نبدأ بالبساطة ونضيف لاحقاً؟
+
+6. ما هو الميزانية/الموعد النهائي المتوقع؟ هل الموعد ٢٠ أغسطس ثابت؟
+
+═══════════════════════════════════════════════════════════════════════════════
+                              END OF PROMPT
+═══════════════════════════════════════════════════════════════════════════════

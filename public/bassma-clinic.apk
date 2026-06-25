@@ -1,0 +1,4 @@
+This is a placeholder file for the Dr. Bassma Clinic native Android APK.
+Once you generate your real APK using an online WebView wrapper (such as WebIntoApp.com or WebToAPK.com), replace this file at:
+public/bassma-clinic.apk
+with the downloaded .apk file, then build and deploy the project.
