@@ -23,6 +23,17 @@ export default function Layout({
       {/* Dynamic Status Banners at the top */}
       <div className="sticky top-0 z-20 flex flex-col w-full text-center">
         
+        {/* Sync Info Header */}
+        {syncState.online && (
+          <div className="bg-clinic-subtle border-b border-clinic-border py-1.5 px-4 text-[10px] text-gray-500 font-semibold flex items-center justify-between shadow-xs print:hidden">
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span>مزامنة سحابية نشطة ومؤمنة</span>
+            </div>
+            <span>نسخة الملف: #{syncState.version || 1}</span>
+          </div>
+        )}
+        
         {/* Offline Banner */}
         {!syncState.online && (
           <div className="bg-clinic-coral text-white py-2 px-4 text-xs font-bold flex items-center justify-center gap-1.5 shadow-md">
