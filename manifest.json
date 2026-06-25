@@ -1,0 +1,16 @@
+{
+  "short_name": "عيادة د. بسمة",
+  "name": "عيادة د. بسمة للأمراض الصدرية",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#FAFAFA",
+  "theme_color": "#0D7377",
+  "display": "standalone",
+  "orientation": "portrait"
+}
