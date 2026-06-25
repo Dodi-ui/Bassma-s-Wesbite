@@ -81,6 +81,7 @@ export default function DashboardScreen({ db, onUpdateDb, currentUser, onNavigat
         ...updatedDays[index],
         status: 'closed',
         closed_at: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+        closed_by: currentUser.displayName,
         total_patients: totalPatientsToday,
         total_revenue: totalRevenue,
         updated_at: new Date().toISOString()
@@ -121,7 +122,21 @@ export default function DashboardScreen({ db, onUpdateDb, currentUser, onNavigat
 
       {/* Day opening controls (Only doctor or lead assistant can do, let's keep it visible for all) */}
       <div className="w-full">
-        {!isDayOpen ? (
+        {todayDayRecord && todayDayRecord.status === 'closed' ? (
+          <div className="w-full py-5 px-4 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm text-center flex flex-col items-center justify-center gap-1.5 animate-fade-in">
+            <span className="text-2xl">🔒</span>
+            <span className="text-lg font-bold text-gray-700">تم إغلاق يوم العمل اليوم بنجاح</span>
+            <span className="text-xs text-gray-500 font-semibold">
+              تم الإغلاق بواسطة {todayDayRecord.closed_by || 'المسؤول'} في تمام الساعة {todayDayRecord.closed_at || 'نهاية اليوم'}
+            </span>
+            <button
+              onClick={handleOpenDay}
+              className="mt-2 text-xs text-clinic-teal font-extrabold underline hover:text-[#0b6b66] active:scale-95 transition-all"
+            >
+              إعادة فتح اليوم (عند الحاجة)
+            </button>
+          </div>
+        ) : !isDayOpen ? (
           <button
             onClick={handleOpenDay}
             className="w-full py-6 bg-clinic-mint text-clinic-text border-2 border-clinic-mint/30 hover:bg-[#92d8be] active:scale-98 transition-all rounded-2xl shadow-md text-xl font-bold flex flex-col items-center justify-center gap-1.5"
