@@ -266,21 +266,36 @@ export async function syncWithTelegram() {
       
       if (serverClearedTime > localClearedTime) {
         console.log("Global reset detected. Clearing local patient records...");
+        const localSettings = localDb.settings || {};
         localDb = {
-          ...localDb,
+          ...serverDb,
           patients: [],
           visits: [],
           days: [],
+          settings: {
+            ...serverDb.settings,
+            ...localSettings
+          },
           meta: {
-            ...(localDb.meta || {}),
+            ...(serverDb.meta || {}),
             last_cleared: serverDb.meta.last_cleared,
             version: Math.max(localDb.meta?.version || 0, serverDb.meta?.version || 0)
           }
         };
         isDirty = false;
+        
+        if (serverMeta) {
+          lastSyncedFileId = serverMeta.id;
+          lastSyncedFileUpdatedAt = serverMeta.updated_at;
+        }
+        
         await localforage.setItem('clinic_db', localDb);
         await localforage.setItem('is_dirty', isDirty);
+        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
+        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        
         triggerSyncStatusChange();
+        return { status: 'synced_pulled', db: localDb };
       }
     }
 
