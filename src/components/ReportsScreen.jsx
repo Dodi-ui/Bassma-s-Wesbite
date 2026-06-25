@@ -117,6 +117,7 @@ export default function ReportsScreen({ db, currentUser }) {
       };
     } catch (e) {
       console.error("PDF canvas render error:", e);
+      alert("حدث خطأ أثناء معالجة الصور والتصميم: " + e.message + "\nتلميح: يمكنك استخدام زر 'طباعة ورقية 🖨️' لحفظ التقرير كملف PDF نظيف وعالي الجودة.");
       element.style.cssText = originalStyle;
       return null;
     }
@@ -319,6 +320,10 @@ export default function ReportsScreen({ db, currentUser }) {
               <Printer size={16} />
               <span>طباعة ورقية 🖨️</span>
             </button>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-[11px] leading-relaxed text-right font-medium">
+            💡 <strong>تنبيه لمستخدمي التطبيق المنزّل (APK):</strong> إذا كنت تستخدم التطبيق المثبت على الهاتف كبرنامج، فقد يتم حظر التحميل المباشر للـ PDF بواسطة نظام أندرويد. يرجى استخدام زر <strong>"إرسال لتلجرام"</strong> لإرساله مباشرة لقناتك، أو الضغط على <strong>"طباعة ورقية 🖨️"</strong> واختيار <strong>"حفظ كـ PDF"</strong> من قائمة خيارات الطباعة في الهاتف.
           </div>
 
           {isLoading && (
