@@ -16,6 +16,16 @@
     <script type="module" src="src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
+        // Auto-reload when new service worker takes control (new deployment active)
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            console.log('New service worker active, reloading page...');
+            window.location.reload();
+          }
+        });
+
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('sw.js').then((reg) => {
             console.log('PWA Service worker registered scope:', reg.scope);

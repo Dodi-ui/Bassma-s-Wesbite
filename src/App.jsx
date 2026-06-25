@@ -101,6 +101,40 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isInitializing, currentUser, syncState.online]);
 
+  // Trigger sync on window focus or visibility change to ensure instant responsiveness when picking up the phone
+  useEffect(() => {
+    if (isInitializing || !currentUser) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && syncState.online) {
+        console.log("App became visible: checking for updates...");
+        syncWithTelegram().then(res => {
+          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
+            setDb({ ...getDb() });
+          }
+        }).catch(err => console.error("Visibility sync failed:", err));
+      }
+    };
+
+    const handleFocus = () => {
+      if (syncState.online) {
+        console.log("App focused: checking for updates...");
+        syncWithTelegram().then(res => {
+          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
+            setDb({ ...getDb() });
+          }
+        }).catch(err => console.error("Focus sync failed:", err));
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isInitializing, currentUser, syncState.online]);
+
   // Handle local database updates
   const handleUpdateDb = async (newDb, auditMessage = "") => {
     const updatedDb = {
