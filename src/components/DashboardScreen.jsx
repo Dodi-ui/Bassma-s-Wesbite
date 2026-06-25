@@ -51,7 +51,8 @@ export default function DashboardScreen({ db, onUpdateDb, currentUser, onNavigat
       opened_by: currentUser.displayName,
       closed_at: null,
       total_patients: 0,
-      total_revenue: 0
+      total_revenue: 0,
+      updated_at: new Date().toISOString()
     };
 
     const updatedDays = db.days ? [...db.days] : [];
@@ -81,7 +82,8 @@ export default function DashboardScreen({ db, onUpdateDb, currentUser, onNavigat
         status: 'closed',
         closed_at: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         total_patients: totalPatientsToday,
-        total_revenue: totalRevenue
+        total_revenue: totalRevenue,
+        updated_at: new Date().toISOString()
       };
 
       const updatedDb = {

@@ -114,7 +114,8 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
           full_name: editName.trim(),
           age: editAge.trim(),
           village: editVillage.trim(),
-          phone: editPhone.trim()
+          phone: editPhone.trim(),
+          updated_at: new Date().toISOString()
         };
       }
       return p;
@@ -133,9 +134,14 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
   const handleDeletePatient = async () => {
     if (!window.confirm(`هل أنت متأكد من حذف المريض ${patient.full_name} نهائياً من العرض؟ (حذف مؤقت)`)) return;
 
+    const nowIso = new Date().toISOString();
     const updatedPatients = db.patients.map(p => {
       if (p.id === patient.id) {
-        return { ...p, is_deleted: true };
+        return { 
+          ...p, 
+          is_deleted: true,
+          updated_at: nowIso
+        };
       }
       return p;
     });
@@ -143,7 +149,11 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
     // Also soft delete patient visits
     const updatedVisits = db.visits.map(v => {
       if (v.patient_id === patient.id) {
-        return { ...v, is_deleted: true };
+        return { 
+          ...v, 
+          is_deleted: true,
+          updated_at: nowIso
+        };
       }
       return v;
     });
@@ -195,7 +205,11 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
 
     const updatedVisits = db.visits.map(v => {
       if (v.id === visitId) {
-        return { ...v, is_deleted: true };
+        return { 
+          ...v, 
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        };
       }
       return v;
     });

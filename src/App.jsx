@@ -71,20 +71,35 @@ export default function App() {
   useEffect(() => {
     if (isInitializing || !currentUser) return;
 
-    const interval = setInterval(() => {
-      if (syncState.online && !syncState.dirty) {
-        console.log("Background sync: checking for updates...");
-        syncWithTelegram().then(res => {
-          if (res.status === 'synced_pulled') {
-            console.log("Background sync pulled new changes.");
+    // Trigger immediate background sync check on login/initialization
+    if (syncState.online) {
+      console.log("Initial background sync check on login...");
+      syncWithTelegram()
+        .then((res) => {
+          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
+            console.log("Initial background sync completed with updates.");
             setDb({ ...getDb() });
           }
-        }).catch(err => console.error("Background sync failed:", err));
+        })
+        .catch((err) => console.error("Initial background sync failed:", err));
+    }
+
+    const interval = setInterval(() => {
+      if (syncState.online) {
+        console.log("Background sync: checking for updates...");
+        syncWithTelegram()
+          .then((res) => {
+            if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
+              console.log("Background sync completed with updates.");
+              setDb({ ...getDb() });
+            }
+          })
+          .catch((err) => console.error("Background sync failed:", err));
       }
     }, 5000); // 5 seconds
 
     return () => clearInterval(interval);
-  }, [isInitializing, currentUser, syncState.online, syncState.dirty]);
+  }, [isInitializing, currentUser, syncState.online]);
 
   // Handle local database updates
   const handleUpdateDb = async (newDb, auditMessage = "") => {

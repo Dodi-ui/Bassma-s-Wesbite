@@ -20,6 +20,7 @@ let syncStatusListener = null;
 let conflictListener = null;
 let lastSyncedFileId = null;
 let lastSyncedFileUpdatedAt = null;
+let isSyncInProgress = false;
 
 // Initialize connection checking
 let onlineStatus = navigator.onLine;
@@ -218,6 +219,11 @@ function mergeDatabases(local, server) {
  * Synchronizes local database with Supabase Storage (bypasses all browser CORS blocks!)
  */
 export async function syncWithTelegram() {
+  if (isSyncInProgress) {
+    console.log("Sync already in progress, skipping concurrent run.");
+    return { status: 'in_progress' };
+  }
+
   if (!onlineStatus) {
     return { status: 'offline' };
   }
@@ -227,6 +233,7 @@ export async function syncWithTelegram() {
   }
 
   try {
+    isSyncInProgress = true;
     // 1. Fetch current server file metadata first to see if it actually changed
     let serverMeta = null;
     try {
@@ -250,6 +257,31 @@ export async function syncWithTelegram() {
         ...localDb, 
         meta: { ...(localDb.meta || {}), version: 0 } 
       };
+    }
+
+    // --- CHECK FOR GLOBAL DATA CLEAR SIGNAL ---
+    if (serverDb && serverDb.meta?.last_cleared) {
+      const serverClearedTime = new Date(serverDb.meta.last_cleared).getTime();
+      const localClearedTime = localDb.meta?.last_cleared ? new Date(localDb.meta.last_cleared).getTime() : 0;
+      
+      if (serverClearedTime > localClearedTime) {
+        console.log("Global reset detected. Clearing local patient records...");
+        localDb = {
+          ...localDb,
+          patients: [],
+          visits: [],
+          days: [],
+          meta: {
+            ...(localDb.meta || {}),
+            last_cleared: serverDb.meta.last_cleared,
+            version: Math.max(localDb.meta?.version || 0, serverDb.meta?.version || 0)
+          }
+        };
+        isDirty = false;
+        await localforage.setItem('clinic_db', localDb);
+        await localforage.setItem('is_dirty', isDirty);
+        triggerSyncStatusChange();
+      }
     }
 
     const localVer = localDb.meta?.version || 1;
@@ -396,6 +428,8 @@ export async function syncWithTelegram() {
   } catch (error) {
     console.error("Sync error:", error);
     throw error;
+  } finally {
+    isSyncInProgress = false;
   }
 }
 

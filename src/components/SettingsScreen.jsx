@@ -161,7 +161,8 @@ export default function SettingsScreen({ db, onUpdateDb, onLogout }) {
         meta: {
           ...db.meta,
           version: (db.meta?.version || 0) + 1,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
+          last_cleared: new Date().toISOString()
         }
       };
 
