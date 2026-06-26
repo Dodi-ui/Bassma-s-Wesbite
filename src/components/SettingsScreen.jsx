@@ -3,7 +3,7 @@ import { Settings, Shield, RefreshCw, LogOut, Key, Check, Loader2, Info, Trash2,
 import { initializeBuckets, initSupabase } from '../services/supabaseService';
 import { syncWithTelegram } from '../services/syncManager';
 
-export default function SettingsScreen({ db, onUpdateDb, onLogout }) {
+export default function SettingsScreen({ db, onUpdateDb, onLogout, onDbRefresh }) {
   // Credentials States
   const [botToken, setBotToken] = useState(db.settings?.telegram_bot_token || '');
   const [chatId, setChatId] = useState(db.settings?.telegram_chat_id || '');
@@ -139,6 +139,8 @@ export default function SettingsScreen({ db, onUpdateDb, onLogout }) {
       } else if (res.status === 'up_to_date') {
         alert("قاعدة البيانات محدثة بالكامل مع السيرفر! ✅");
       }
+
+      onDbRefresh?.();
     } catch (err) {
       console.error("Manual sync failed:", err);
       alert("فشلت المزامنة: " + err.message);

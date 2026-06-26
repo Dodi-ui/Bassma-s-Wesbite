@@ -3,6 +3,7 @@ import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
   initSyncManager,
   subscribeToSyncStatus,
+  subscribeToDbChanges,
   subscribeToConflict,
   getDb,
   saveDbLocally,
@@ -49,8 +50,10 @@ export default function App() {
       // Subscribe to sync status updates (online/dirty/version)
       const unsubscribeSync = subscribeToSyncStatus((status) => {
         setSyncState(status);
-        // Refresh local DB in state on change
-        setDb({ ...getDb() });
+      });
+
+      const unsubscribeDb = subscribeToDbChanges((nextDb) => {
+        setDb({ ...nextDb });
       });
 
       // Subscribe to database version conflict notifications
@@ -60,6 +63,7 @@ export default function App() {
 
       return () => {
         unsubscribeSync();
+        unsubscribeDb();
         unsubscribeConflict();
       };
     };
@@ -67,63 +71,59 @@ export default function App() {
     startApp();
   }, []);
 
-  // Periodic polling for multi-device synchronization (every 5 seconds for real-time responsiveness)
+  // Periodic polling for multi-device synchronization (every 2 seconds)
   useEffect(() => {
     if (isInitializing || !currentUser) return;
 
-    // Trigger immediate background sync check on login/initialization
-    if (syncState.online) {
-      console.log("Initial background sync check on login...");
-      syncWithTelegram()
-        .then((res) => {
-          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
-            console.log("Initial background sync completed with updates.");
-            setDb({ ...getDb() });
-          }
-        })
-        .catch((err) => console.error("Initial background sync failed:", err));
-    }
-
-    const interval = setInterval(() => {
-      if (syncState.online) {
-        console.log("Background sync: checking for updates...");
-        syncWithTelegram()
-          .then((res) => {
-            if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
-              console.log("Background sync completed with updates.");
-              setDb({ ...getDb() });
-            }
-          })
-          .catch((err) => console.error("Background sync failed:", err));
+    const applySyncResult = (res) => {
+      if (
+        res.status === 'synced_pulled' ||
+        res.status === 'synced_pushed' ||
+        res.status === 'resolved_local_pushed' ||
+        res.status === 'resolved_server_pulled'
+      ) {
+        setDb({ ...getDb() });
       }
-    }, 5000); // 5 seconds
+    };
+
+    const runBackgroundSync = () => {
+      if (!navigator.onLine) return;
+      syncWithTelegram()
+        .then(applySyncResult)
+        .catch((err) => console.error("Background sync failed:", err));
+    };
+
+    runBackgroundSync();
+
+    const interval = setInterval(runBackgroundSync, 2000);
 
     return () => clearInterval(interval);
-  }, [isInitializing, currentUser, syncState.online]);
+  }, [isInitializing, currentUser]);
 
   // Trigger sync on window focus or visibility change to ensure instant responsiveness when picking up the phone
   useEffect(() => {
     if (isInitializing || !currentUser) return;
 
+    const applySyncResult = (res) => {
+      if (
+        res.status === 'synced_pulled' ||
+        res.status === 'synced_pushed' ||
+        res.status === 'resolved_local_pushed' ||
+        res.status === 'resolved_server_pulled'
+      ) {
+        setDb({ ...getDb() });
+      }
+    };
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && syncState.online) {
-        console.log("App became visible: checking for updates...");
-        syncWithTelegram().then(res => {
-          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
-            setDb({ ...getDb() });
-          }
-        }).catch(err => console.error("Visibility sync failed:", err));
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        syncWithTelegram().then(applySyncResult).catch(err => console.error("Visibility sync failed:", err));
       }
     };
 
     const handleFocus = () => {
-      if (syncState.online) {
-        console.log("App focused: checking for updates...");
-        syncWithTelegram().then(res => {
-          if (res.status === 'synced_pulled' || res.status === 'synced_pushed') {
-            setDb({ ...getDb() });
-          }
-        }).catch(err => console.error("Focus sync failed:", err));
+      if (navigator.onLine) {
+        syncWithTelegram().then(applySyncResult).catch(err => console.error("Focus sync failed:", err));
       }
     };
 
@@ -133,7 +133,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [isInitializing, currentUser, syncState.online]);
+  }, [isInitializing, currentUser]);
 
   // Handle local database updates
   const handleUpdateDb = async (newDb, auditMessage = "") => {
@@ -292,6 +292,7 @@ export default function App() {
             db={db}
             onUpdateDb={handleUpdateDb}
             onLogout={handleLogout}
+            onDbRefresh={() => setDb({ ...getDb() })}
           />
         );
       case 'new-patient':

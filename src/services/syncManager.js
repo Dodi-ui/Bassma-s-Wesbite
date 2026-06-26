@@ -17,6 +17,7 @@ localforage.config({
 let localDb = { ...DEFAULT_DB_SCHEMA };
 let isDirty = false;
 let syncStatusListener = null;
+let dbChangeListener = null;
 let conflictListener = null;
 let lastSyncedFileId = null;
 let lastSyncedFileUpdatedAt = null;
@@ -45,6 +46,32 @@ function triggerSyncStatusChange() {
   }
 }
 
+function notifyDbChanged() {
+  triggerSyncStatusChange();
+  if (dbChangeListener) {
+    dbChangeListener({ ...localDb });
+  }
+}
+
+function serverFileUnchanged(serverMeta) {
+  if (!serverMeta || !lastSyncedFileUpdatedAt) return false;
+  const serverTimestamp = serverMeta.updated_at || serverMeta.created_at;
+  return lastSyncedFileUpdatedAt === serverTimestamp;
+}
+
+function rememberServerMeta(serverMeta) {
+  if (!serverMeta) return;
+  lastSyncedFileId = serverMeta.id;
+  lastSyncedFileUpdatedAt = serverMeta.updated_at || serverMeta.created_at;
+}
+
+async function persistLocalDb() {
+  await localforage.setItem('clinic_db', localDb);
+  await localforage.setItem('is_dirty', isDirty);
+  await localforage.setItem('last_synced_file_id', lastSyncedFileId);
+  await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+}
+
 /**
  * Subscribes to sync status updates (online/offline/dirty changes)
  */
@@ -53,6 +80,16 @@ export function subscribeToSyncStatus(listener) {
   triggerSyncStatusChange();
   return () => {
     syncStatusListener = null;
+  };
+}
+
+/**
+ * Subscribes to database content changes (after sync pull/push/clear)
+ */
+export function subscribeToDbChanges(listener) {
+  dbChangeListener = listener;
+  return () => {
+    dbChangeListener = null;
   };
 }
 
@@ -242,11 +279,9 @@ export async function syncWithTelegram() {
       console.warn("Failed to check DB metadata, falling back to full check:", err.message);
     }
 
-    if (serverMeta && !isDirty) {
-      // If we are not dirty and the server metadata matches our last synced version, skip downloading
-      if (lastSyncedFileId === serverMeta.id || lastSyncedFileUpdatedAt === serverMeta.updated_at) {
-        return { status: 'up_to_date' };
-      }
+    if (serverMeta && !isDirty && serverFileUnchanged(serverMeta)) {
+      // Server file timestamp unchanged since our last sync — skip full download
+      return { status: 'up_to_date' };
     }
 
     // 2. Fetch current server database from Supabase Storage
@@ -284,17 +319,11 @@ export async function syncWithTelegram() {
         };
         isDirty = false;
         
-        if (serverMeta) {
-          lastSyncedFileId = serverMeta.id;
-          lastSyncedFileUpdatedAt = serverMeta.updated_at;
-        }
+        rememberServerMeta(serverMeta);
         
-        await localforage.setItem('clinic_db', localDb);
-        await localforage.setItem('is_dirty', isDirty);
-        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        await persistLocalDb();
         
-        triggerSyncStatusChange();
+        notifyDbChanged();
         return { status: 'synced_pulled', db: localDb };
       }
     }
@@ -321,17 +350,11 @@ export async function syncWithTelegram() {
         isDirty = false;
 
         const newMeta = await fetchMasterDbMetadataFromSupabase();
-        if (newMeta) {
-          lastSyncedFileId = newMeta.id;
-          lastSyncedFileUpdatedAt = newMeta.updated_at;
-        }
+        rememberServerMeta(newMeta);
 
-        await localforage.setItem('clinic_db', localDb);
-        await localforage.setItem('is_dirty', isDirty);
-        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        await persistLocalDb();
 
-        triggerSyncStatusChange();
+        notifyDbChanged();
         return { status: 'synced_pushed', db: localDb };
       } else {
         // Safe to pull server changes
@@ -348,19 +371,13 @@ export async function syncWithTelegram() {
         };
         
         isDirty = false;
-        if (serverMeta) {
-          lastSyncedFileId = serverMeta.id;
-          lastSyncedFileUpdatedAt = serverMeta.updated_at;
-        }
-        await localforage.setItem('clinic_db', localDb);
-        await localforage.setItem('is_dirty', isDirty);
-        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        rememberServerMeta(serverMeta);
+        await persistLocalDb();
 
-        triggerSyncStatusChange();
+        notifyDbChanged();
         return { status: 'synced_pulled', db: localDb };
       }
-    } else if (serverVer === localVer && serverMeta && lastSyncedFileUpdatedAt !== serverMeta.updated_at) {
+    } else if (serverVer === localVer && serverMeta && !serverFileUnchanged(serverMeta)) {
       // Versions are equal but file metadata has changed, indicating another device updated the server file.
       if (isDirty && !isLocalEmpty) {
         console.log(`Metadata changed with equal versions (${serverVer}). Merging databases...`);
@@ -374,17 +391,11 @@ export async function syncWithTelegram() {
         isDirty = false;
 
         const newMeta = await fetchMasterDbMetadataFromSupabase();
-        if (newMeta) {
-          lastSyncedFileId = newMeta.id;
-          lastSyncedFileUpdatedAt = newMeta.updated_at;
-        }
+        rememberServerMeta(newMeta);
 
-        await localforage.setItem('clinic_db', localDb);
-        await localforage.setItem('is_dirty', isDirty);
-        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        await persistLocalDb();
 
-        triggerSyncStatusChange();
+        notifyDbChanged();
         return { status: 'synced_pushed', db: localDb };
       } else {
         console.log(`Metadata changed with equal versions (${serverVer}). Pulling server changes...`);
@@ -398,15 +409,11 @@ export async function syncWithTelegram() {
         };
         isDirty = false;
         
-        lastSyncedFileId = serverMeta.id;
-        lastSyncedFileUpdatedAt = serverMeta.updated_at;
+        rememberServerMeta(serverMeta);
         
-        await localforage.setItem('clinic_db', localDb);
-        await localforage.setItem('is_dirty', isDirty);
-        await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-        await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+        await persistLocalDb();
 
-        triggerSyncStatusChange();
+        notifyDbChanged();
         return { status: 'synced_pulled', db: localDb };
       }
     } else if (isDirty) {
@@ -418,23 +425,16 @@ export async function syncWithTelegram() {
       isDirty = false;
 
       const newMeta = await fetchMasterDbMetadataFromSupabase();
-      if (newMeta) {
-        lastSyncedFileId = newMeta.id;
-        lastSyncedFileUpdatedAt = newMeta.updated_at;
-      }
+      rememberServerMeta(newMeta);
 
-      await localforage.setItem('clinic_db', localDb);
-      await localforage.setItem('is_dirty', isDirty);
-      await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-      await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+      await persistLocalDb();
 
-      triggerSyncStatusChange();
+      notifyDbChanged();
       return { status: 'synced_pushed', db: localDb };
     } else {
       // Versions match and not dirty. No changes needed.
+      rememberServerMeta(serverMeta);
       if (serverMeta) {
-        lastSyncedFileId = serverMeta.id;
-        lastSyncedFileUpdatedAt = serverMeta.updated_at;
         await localforage.setItem('last_synced_file_id', lastSyncedFileId);
         await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
       }
@@ -481,19 +481,13 @@ export async function resolveConflict(choice, serverDb = null) {
       isDirty = false;
 
       const newMeta = await fetchMasterDbMetadataFromSupabase();
-      if (newMeta) {
-        lastSyncedFileId = newMeta.id;
-        lastSyncedFileUpdatedAt = newMeta.updated_at;
-      }
+      rememberServerMeta(newMeta);
 
-      await localforage.setItem('clinic_db', localDb);
-      await localforage.setItem('is_dirty', isDirty);
-      await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-      await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+      await persistLocalDb();
       
       await sendAuditLog(token, chatId, `⚠️ <b>تنبيه تعارض:</b> تم فرض التعديلات المحلية وتخطي التعارض بواسطة المسؤول.`);
 
-      triggerSyncStatusChange();
+      notifyDbChanged();
       return { status: 'resolved_local_pushed' };
     } else if (choice === 'use_server') {
       let actualServerDb = serverDb || await fetchMasterDbFromSupabase();
@@ -513,17 +507,11 @@ export async function resolveConflict(choice, serverDb = null) {
       isDirty = false;
 
       const newMeta = await fetchMasterDbMetadataFromSupabase();
-      if (newMeta) {
-        lastSyncedFileId = newMeta.id;
-        lastSyncedFileUpdatedAt = newMeta.updated_at;
-      }
+      rememberServerMeta(newMeta);
 
-      await localforage.setItem('clinic_db', localDb);
-      await localforage.setItem('is_dirty', isDirty);
-      await localforage.setItem('last_synced_file_id', lastSyncedFileId);
-      await localforage.setItem('last_synced_file_updated_at', lastSyncedFileUpdatedAt);
+      await persistLocalDb();
 
-      triggerSyncStatusChange();
+      notifyDbChanged();
       return { status: 'resolved_server_pulled' };
     }
   } catch (error) {

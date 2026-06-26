@@ -237,10 +237,11 @@ export async function fetchMasterDbMetadataFromSupabase() {
   try {
     const { data, error } = await supabaseClient.storage
       .from('reports')
-      .list('', { limit: 1, search: 'clinic_db.json' });
+      .list('', { limit: 100, sortBy: { column: 'updated_at', order: 'desc' } });
 
     if (error) throw error;
-    return data && data.length > 0 ? data[0] : null;
+    const dbFile = data?.find((file) => file.name === 'clinic_db.json');
+    return dbFile || null;
   } catch (error) {
     console.error("Failed to fetch database file metadata from Supabase:", error);
     return null;
