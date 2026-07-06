@@ -28,6 +28,8 @@ export default function ReportsScreen({ db, currentUser }) {
   // Find daily stats
   const todayVisits = db.visits?.filter(v => v.date === todayStr && !v.is_deleted) || [];
   const dailyPatientsCount = todayVisits.length;
+  const dailyCheckupsCount = todayVisits.filter(v => v.visit_type !== 'followup').length;
+  const dailyFollowupsCount = todayVisits.filter(v => v.visit_type === 'followup').length;
   const dailyTotalRevenue = todayVisits.reduce((sum, v) => sum + (Number(v.amount_paid) || 0), 0);
 
   // Find monthly stats
@@ -36,6 +38,8 @@ export default function ReportsScreen({ db, currentUser }) {
   
   const openDaysCount = monthlyDays.filter(d => d.status === 'open' || d.status === 'closed').length;
   const monthlyPatientsCount = monthlyVisits.length;
+  const monthlyCheckupsCount = monthlyVisits.filter(v => v.visit_type !== 'followup').length;
+  const monthlyFollowupsCount = monthlyVisits.filter(v => v.visit_type === 'followup').length;
   const monthlyTotalRevenue = monthlyVisits.reduce((sum, v) => sum + (Number(v.amount_paid) || 0), 0);
   const avgPatientsPerDay = openDaysCount > 0 ? (monthlyPatientsCount / openDaysCount).toFixed(1) : 0;
 
@@ -43,10 +47,15 @@ export default function ReportsScreen({ db, currentUser }) {
   const monthlyBreakdown = {};
   monthlyVisits.forEach(v => {
     if (!monthlyBreakdown[v.date]) {
-      monthlyBreakdown[v.date] = { patients: 0, revenue: 0 };
+      monthlyBreakdown[v.date] = { patients: 0, revenue: 0, checkups: 0, followups: 0 };
     }
     monthlyBreakdown[v.date].patients += 1;
     monthlyBreakdown[v.date].revenue += Number(v.amount_paid) || 0;
+    if (v.visit_type === 'followup') {
+      monthlyBreakdown[v.date].followups += 1;
+    } else {
+      monthlyBreakdown[v.date].checkups += 1;
+    }
   });
 
   // Split daily visits for dual-column layout (only uses 2 columns if length > 1)
@@ -181,14 +190,14 @@ export default function ReportsScreen({ db, currentUser }) {
       let msg = "";
       if (reportType === 'daily') {
         msg = `📄 <b>تقرير يوم العمل (${todayArabicDate}):</b>\n`;
-        msg += `👥 عدد الحالات: ${dailyPatientsCount} حالة\n`;
+        msg += `👥 عدد الحالات: ${dailyPatientsCount} حالة (${dailyCheckupsCount} كشف · ${dailyFollowupsCount} استشارة)\n`;
         msg += `💰 إجمالي الدخل: ${dailyTotalRevenue} ج.م\n`;
         msg += `🔗 رابط تحميل ملف التقرير: <a href="${signedUrl}">تحميل PDF</a>\n`;
         msg += `بواسطة: ${currentUser.displayName}`;
       } else {
         msg = `📊 <b>تقرير الشهر (${getSelectedMonthArabicName()}):</b>\n`;
         msg += `🗓️ أيام العمل المفتوحة: ${openDaysCount} يوم\n`;
-        msg += `👥 إجمالي المرضى: ${monthlyPatientsCount} مريض\n`;
+        msg += `👥 إجمالي المرضى: ${monthlyPatientsCount} مريض (${monthlyCheckupsCount} كشف · ${monthlyFollowupsCount} استشارة)\n`;
         msg += `💰 إجمالي الدخل الشهري: ${monthlyTotalRevenue} ج.م\n`;
         msg += `📈 متوسط المرضى يومياً: ${avgPatientsPerDay} حالة/يوم\n`;
         msg += `🔗 رابط تحميل التقرير الشهري: <a href="${signedUrl}">تحميل PDF</a>\n`;
@@ -363,6 +372,7 @@ export default function ReportsScreen({ db, currentUser }) {
               <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
                 <span className="block text-[10px] text-gray-400 font-bold mb-0.5">إجمالي الحالات</span>
                 <span className="text-xl font-black text-clinic-teal">{dailyPatientsCount}</span>
+                <span className="block text-[9px] text-gray-400 font-bold mt-0.5">({dailyCheckupsCount} كشف · {dailyFollowupsCount} استشارة)</span>
               </div>
               <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
                 <span className="block text-[10px] text-gray-400 font-bold mb-0.5">إجمالي الإيراد</span>
@@ -390,7 +400,9 @@ export default function ReportsScreen({ db, currentUser }) {
                           const patient = db.patients?.find(p => p.id === v.patient_id);
                           return (
                             <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
-                              <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">{patient?.full_name || 'غير معروف'}</td>
+                              <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">
+                                {patient?.full_name || 'غير معروف'} {v.visit_type === 'followup' ? '(س)' : '(ك)'}
+                              </td>
                               <td className="py-1 px-1.5 text-gray-500 truncate max-w-[55px]">{patient?.village || 'غير معروف'}</td>
                               <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{v.amount_paid} ج.م</td>
                             </tr>
@@ -416,7 +428,9 @@ export default function ReportsScreen({ db, currentUser }) {
                             const patient = db.patients?.find(p => p.id === v.patient_id);
                             return (
                               <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
-                                <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">{patient?.full_name || 'غير معروف'}</td>
+                                <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">
+                                  {patient?.full_name || 'غير معروف'} {v.visit_type === 'followup' ? '(س)' : '(ك)'}
+                                </td>
                                 <td className="py-1 px-1.5 text-gray-500 truncate max-w-[55px]">{patient?.village || 'غير معروف'}</td>
                                 <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{v.amount_paid} ج.م</td>
                               </tr>
@@ -471,6 +485,7 @@ export default function ReportsScreen({ db, currentUser }) {
                 <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">إجمالي الحالات</span>
                   <span className="text-lg font-black text-clinic-teal">{monthlyPatientsCount}</span>
+                  <span className="block text-[8px] text-gray-400 font-bold mt-0.5">({monthlyCheckupsCount} كشف · {monthlyFollowupsCount} استشارة)</span>
                 </div>
                 <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">إجمالي الدخل</span>
@@ -500,7 +515,7 @@ export default function ReportsScreen({ db, currentUser }) {
                           return (
                             <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
                               <td className="py-1 px-1.5 font-semibold text-clinic-text">{new Date(date).toLocaleDateString('ar-EG', {month: 'numeric', day: 'numeric'})}</td>
-                              <td className="py-1 px-1.5 text-gray-500">{item.patients} ح</td>
+                              <td className="py-1 px-1.5 text-gray-500">{item.patients} ح ({item.checkups || 0}ك·{item.followups || 0}س)</td>
                               <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{item.revenue} ج.م</td>
                             </tr>
                           );
@@ -526,7 +541,7 @@ export default function ReportsScreen({ db, currentUser }) {
                             return (
                               <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
                                 <td className="py-1 px-1.5 font-semibold text-clinic-text">{new Date(date).toLocaleDateString('ar-EG', {month: 'numeric', day: 'numeric'})}</td>
-                                <td className="py-1 px-1.5 text-gray-500">{item.patients} ح</td>
+                                <td className="py-1 px-1.5 text-gray-500">{item.patients} ح ({item.checkups || 0}ك·{item.followups || 0}س)</td>
                                 <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{item.revenue} ج.م</td>
                               </tr>
                             );

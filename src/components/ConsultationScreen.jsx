@@ -279,7 +279,18 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
           <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-sm text-clinic-text">
             <div>
               <span className="text-xs text-gray-400 block">اسم المريض</span>
-              <span className="font-bold">{patient.full_name}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-bold">{patient.full_name}</span>
+                {visit.visit_type === 'followup' ? (
+                  <span className="text-[10px] font-extrabold bg-purple-50 border border-purple-200 text-purple-700 px-2 py-0.5 rounded-full">
+                    استشارة
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-extrabold bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
+                    كشف
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <span className="text-xs text-gray-400 block">السن والبلد</span>
