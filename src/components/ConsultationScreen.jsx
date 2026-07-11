@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight, Mic, Camera, Trash2, Check, RefreshCw, X, Loader2, User, Phone, MapPin, DollarSign, Calendar, Sparkles } from 'lucide-react';
 import { VoiceRecorderService } from '../services/voiceRecorder';
 import { uploadFile, getSignedUrl } from '../services/supabaseService';
-import { transcribeWithAssemblyAi } from '../services/assemblyAiService';
+import { transcribeWithAssemblyAi, queryLeMurTask } from '../services/assemblyAiService';
 
 const recorderService = new VoiceRecorderService();
 
@@ -132,10 +132,16 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
           const signedUrl = await getSignedUrl('voice-memos', tempPath);
           
           // 3. Request AssemblyAI transcription
-          const aiText = await transcribeWithAssemblyAi(assemblyKey, signedUrl);
-          setAssemblyAiTranscription(aiText);
+          const transcriptionResult = await transcribeWithAssemblyAi(assemblyKey, signedUrl);
+          
+          // 4. Request LeMUR AI to analyze the conversation and extract complaints / symptoms
+          const prompt = "This is a recording of a doctor-patient medical consultation. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
+          const aiSummary = await queryLeMurTask(assemblyKey, transcriptionResult.id, prompt);
+          
+          setAssemblyAiTranscription(aiSummary);
+          setComplaintText(aiSummary); // Automatically write it down as active complaint text!
         } catch (err) {
-          console.error("AssemblyAI background transcription failed:", err);
+          console.error("AssemblyAI background transcription/analysis failed:", err);
           setAssemblyAiError("فشلت مزامنة الذكاء الاصطناعي AssemblyAI. تم الاعتماد على مفرغ المتصفح.");
         } finally {
           setIsAssemblyAiLoading(false);
@@ -205,10 +211,18 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         const photoPaths = [];
         for (let i = 0; i < photos.length; i++) {
           const photo = photos[i];
-          const fileExt = photo.file.name.split('.').pop() || 'jpg';
+          // Compress image to save storage space and bypass 1GB free tier limits
+          let fileToUpload = photo.file;
+          try {
+            fileToUpload = await compressImage(photo.file);
+          } catch (compressErr) {
+            console.warn("Failed to compress image, using original:", compressErr);
+          }
+          
+          const fileExt = fileToUpload.name.split('.').pop() || 'jpg';
           const photoPath = `${patient.id}/${visit.id}_prescription_${i}.${fileExt}`;
           try {
-            await uploadFile('prescriptions', photoPath, photo.file);
+            await uploadFile('prescriptions', photoPath, fileToUpload);
             photoPaths.push(photoPath);
           } catch (uploadErr) {
             console.error("Photo upload failed:", uploadErr);
@@ -546,3 +560,47 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
     </div>
   );
 }
+
+// Helper to compress image client-side to save storage space (target: max 1200px and 70% jpeg quality)
+function compressImage(file, maxDimension = 1200, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          }
+        } else {
+          if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        }, 'image/jpeg', quality);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+

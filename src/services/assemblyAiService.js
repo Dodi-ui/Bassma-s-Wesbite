@@ -73,7 +73,7 @@ export async function transcribeWithAssemblyAi(apiKey, audioUrl, onProgress) {
           
           if (result.status === "completed") {
             clearInterval(interval);
-            resolve(result.text);
+            resolve({ text: result.text, id: transcriptId });
           } else if (result.status === "failed") {
             clearInterval(interval);
             reject(new Error(result.error || "فشل تفريغ الصوت"));
@@ -89,3 +89,33 @@ export async function transcribeWithAssemblyAi(apiKey, audioUrl, onProgress) {
     throw error;
   }
 }
+
+/**
+ * Runs a LeMUR task to ask LLM about the transcript (extract symptoms, complaints, etc.)
+ */
+export async function queryLeMurTask(apiKey, transcriptId, prompt) {
+  if (!apiKey) throw new Error("AssemblyAI API key is missing");
+  if (!transcriptId) throw new Error("Transcript ID is missing");
+
+  const response = await fetchWithCorsProxy("https://api.assemblyai.com/v2/lemur/task", {
+    method: "POST",
+    headers: {
+      "authorization": apiKey,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      transcript_ids: [transcriptId],
+      prompt: prompt,
+      final_model: "default"
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "فشل تحليل المحادثة بالذكاء الاصطناعي");
+  }
+
+  const data = await response.json();
+  return data.response; // returns LLM text
+}
+

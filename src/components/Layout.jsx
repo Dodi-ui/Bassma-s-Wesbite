@@ -17,6 +17,23 @@ export default function Layout({
     { id: 'settings', label: 'إعدادات', icon: Settings }
   ];
 
+  const [showDirtyBanner, setShowDirtyBanner] = React.useState(false);
+
+  React.useEffect(() => {
+    let timer = null;
+    if (syncState.dirty && syncState.online) {
+      timer = setTimeout(() => {
+        setShowDirtyBanner(true);
+      }, 5000);
+    } else {
+      setShowDirtyBanner(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [syncState.dirty, syncState.online]);
+
   return (
     <div className="w-full max-w-xl mx-auto min-h-screen bg-clinic-bg flex flex-col relative border-x border-clinic-border shadow-lg">
       
@@ -32,7 +49,7 @@ export default function Layout({
         )}
 
         {/* Dirty / Unsaved Local Edits Banner */}
-        {syncState.online && syncState.dirty && (
+        {showDirtyBanner && (
           <div
             onClick={onTriggerSync}
             className="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-colors"
