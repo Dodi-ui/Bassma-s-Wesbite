@@ -48,7 +48,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
         village: village.trim(),
         phone: phone.trim(),
         created_at: new Date().toISOString(),
-        created_by: currentUser.displayName
+        created_by: currentUser?.displayName || currentUser?.name || 'الاستقبال'
       };
 
       // 2. Create Visit Record with 'waiting' status
@@ -68,7 +68,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
         amount_paid: parseFloat(amountPaid) || 0,
         prescription_image_url: '',
         created_at: new Date().toISOString(),
-        created_by: currentUser.displayName,
+        created_by: currentUser?.displayName || currentUser?.name || 'الاستقبال',
         updated_at: null
       };
 
@@ -108,6 +108,15 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
       setIsSaving(false);
     }
   };
+
+  // Guard: if db hasn't loaded yet, show a safe loading state
+  if (!db) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-clinic-bg">
+        <span className="text-clinic-teal font-bold text-sm">جاري تحميل البيانات...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col pb-24 bg-clinic-bg">

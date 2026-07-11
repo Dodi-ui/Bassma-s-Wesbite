@@ -36,7 +36,10 @@ export default function App() {
     return localStorage.getItem('clinic_tab') || 'home';
   });
   const [activeScreen, setActiveScreen] = useState(() => {
-    return localStorage.getItem('clinic_screen') || 'home';
+    const saved = localStorage.getItem('clinic_screen') || 'home';
+    // On refresh, complex sub-screens fall back to their parent tab to avoid crashes
+    const safeScreens = ['home', 'search', 'reports', 'settings'];
+    return safeScreens.includes(saved) ? saved : 'home';
   });
   const [selectedPatientId, setSelectedPatientId] = useState(() => {
     return localStorage.getItem('clinic_selected_patient_id') || null;

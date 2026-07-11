@@ -86,10 +86,19 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
       setSignedMedia(urls);
     };
 
-    if (patientVisits.length > 0 && db.settings?.supabase_url) {
+    if (patientVisits.length > 0 && db?.settings?.supabase_url) {
       signAllMedia();
     }
-  }, [patientVisits, db.settings]);
+  }, [patientVisits, db?.settings]);
+
+  // Guard: db or patient not ready
+  if (!db) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-clinic-bg">
+        <span className="text-clinic-teal font-bold text-sm">جاري تحميل بيانات المريض...</span>
+      </div>
+    );
+  }
 
   if (!patient) {
     return (
