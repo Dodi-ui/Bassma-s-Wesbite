@@ -55,12 +55,43 @@ export async function pollAssemblyAiStatus(apiKey, transcriptId) {
 }
 
 /**
- * Helper to fully transcribe an audio URL by starting the job and polling until completion
+ * Uploads a local binary audio blob directly to AssemblyAI CDN using a CORS proxy.
  */
-export async function transcribeWithAssemblyAi(apiKey, audioUrl, onProgress) {
+export async function uploadAudioToAssemblyAi(apiKey, audioBlob) {
+  if (!apiKey) throw new Error("AssemblyAI API key is missing");
+  if (!audioBlob) throw new Error("Audio data is missing");
+
+  const response = await fetchWithCorsProxy("https://api.assemblyai.com/v2/upload", {
+    method: "POST",
+    headers: {
+      "authorization": apiKey,
+      "content-type": "application/octet-stream"
+    },
+    body: audioBlob
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "فشل رفع الملف الصوتي المباشر إلى AssemblyAI");
+  }
+
+  const data = await response.json();
+  return data.upload_url; // Returns the direct AssemblyAI upload URL
+}
+
+/**
+ * Helper to fully transcribe an audio source (either URL string or raw Blob) by starting the job and polling until completion.
+ */
+export async function transcribeWithAssemblyAi(apiKey, audioSource, onProgress) {
   try {
+    let url = audioSource;
+    if (audioSource instanceof Blob) {
+      if (onProgress) onProgress("uploading");
+      url = await uploadAudioToAssemblyAi(apiKey, audioSource);
+    }
+
     if (onProgress) onProgress("starting");
-    const job = await startAssemblyAiTranscription(apiKey, audioUrl);
+    const job = await startAssemblyAiTranscription(apiKey, url);
     const transcriptId = job.id;
 
     if (onProgress) onProgress("processing");

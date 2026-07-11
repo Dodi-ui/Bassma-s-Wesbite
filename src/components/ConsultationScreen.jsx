@@ -121,33 +121,39 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         setComplaintText(latestTranscript); // Default to Google first
       }
 
-      // Check if AssemblyAI key is configured to run AI symptom analysis using text
+      // Check if AssemblyAI key is configured to run AI symptom analysis
       // Uses the user settings key, with a direct hardcoded fallback to ensure it always works
       const assemblyKey = db.settings?.voice_api_key || "b46a6b8b979e4715b34c7264e98bda6d";
-      if (assemblyKey && latestTranscript && latestTranscript.trim().length > 10) {
-        setIsAssemblyAiLoading(true);
-        setAssemblyAiError('');
-        
-        try {
-          // Use LLM Gateway with the browser-transcribed text (routed through CORS proxy)
+      
+      setIsAssemblyAiLoading(true);
+      setAssemblyAiError('');
+      
+      // Start transcription on the recorded audio file directly
+      transcribeWithAssemblyAi(assemblyKey, result.blob)
+        .then(async (transcriptionResult) => {
           const prompt = "This is a transcribed doctor-patient medical consultation in Arabic. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
-
-          const aiSummary = await queryLlmGateway(assemblyKey, latestTranscript, prompt);
           
-          if (aiSummary) {
-            setAssemblyAiTranscription(aiSummary);
-            setComplaintText(aiSummary); // Auto-fill the complaint text with AI analysis!
+          try {
+            const aiSummary = await queryLlmGateway(assemblyKey, transcriptionResult.text, prompt);
+            if (aiSummary) {
+              setAssemblyAiTranscription(aiSummary);
+              setComplaintText(aiSummary); // Auto-fill the complaint text with AI analysis!
+            }
+          } catch (llmErr) {
+            console.error("LLM Gateway analysis failed:", llmErr);
+            // Fallback to the raw transcription text if LLM analysis fails
+            setAssemblyAiTranscription(transcriptionResult.text);
+            setComplaintText(transcriptionResult.text);
+            setAssemblyAiError("فشل تلخيص الذكاء الاصطناعي. تم عرض التفريغ الحرفي.");
           }
-        } catch (err) {
-          console.error("LLM Gateway symptom analysis failed:", err);
-          setAssemblyAiError("فشل تحليل الذكاء الاصطناعي. تم الاعتماد على تفريغ المتصفح.");
-        } finally {
+        })
+        .catch((err) => {
+          console.error("AssemblyAI transcription failed:", err);
+          setAssemblyAiError("فشل تفريغ الصوت بالذكاء الاصطناعي.");
+        })
+        .finally(() => {
           setIsAssemblyAiLoading(false);
-        }
-      } else if (assemblyKey && (!latestTranscript || latestTranscript.trim().length <= 10)) {
-        // Browser transcription was empty — cannot run AI analysis
-        setAssemblyAiError("لم يُكتشف نص كافٍ من الميكروفون لتشغيل تحليل الذكاء الاصطناعي.");
-      }
+        });
     }
   };
 
