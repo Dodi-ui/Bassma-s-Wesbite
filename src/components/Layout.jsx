@@ -66,7 +66,7 @@ export default function Layout({
               className="flex items-center gap-1 text-clinic-teal font-extrabold hover:text-[#0b6b66] active:scale-95 transition-all cursor-pointer border border-clinic-teal/20 rounded px-1.5 py-0.5 bg-clinic-teal/5"
             >
               <RefreshCw size={10} className="text-clinic-teal" />
-              <span>نسخة الملف: #{syncState.version || 1}</span>
+              <span>تحديث التطبيق 🔄</span>
             </button>
           </div>
         )}

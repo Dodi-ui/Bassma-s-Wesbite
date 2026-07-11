@@ -34,9 +34,10 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
   
   // Adding New Visit to this Patient
   const [isAddingVisit, setIsAddingVisit] = useState(false);
-  const [newVisitAmount, setNewVisitAmount] = useState('250');
+  const [newVisitAmount, setNewVisitAmount] = useState('200');
   const [newVisitComplaint, setNewVisitComplaint] = useState('');
   const [newVisitFollowUp, setNewVisitFollowUp] = useState('');
+  const [newVisitType, setNewVisitType] = useState('checkup'); // 'checkup' or 'followup'
 
   // Load patient & visits
   useEffect(() => {
@@ -240,6 +241,7 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
       patient_id: patient.id,
       date: todayStr,
       day_status: 'open',
+      visit_type: newVisitType,
       complaint_text: newVisitComplaint.trim(),
       complaint_audio_url: "",
       diagnosis: "",
@@ -267,6 +269,8 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
     setIsAddingVisit(false);
     setNewVisitComplaint('');
     setNewVisitFollowUp('');
+    setNewVisitType('checkup');
+    setNewVisitAmount('200');
   };
 
   return (
@@ -343,12 +347,21 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
                     <div className="flex items-center justify-between border-b border-gray-100 pb-2">
                       <div
                         onClick={() => setSelectedVisit(visit)}
-                        className="flex items-center gap-2 text-clinic-teal cursor-pointer hover:underline"
+                        className="flex items-center gap-2 text-clinic-teal cursor-pointer hover:underline flex-wrap"
                       >
                         <Calendar size={16} />
                         <span className="font-bold text-sm">
                           {new Date(visit.date).toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         </span>
+                        {visit.visit_type === 'followup' ? (
+                          <span className="text-[9px] font-extrabold bg-purple-50 border border-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full">
+                            استشارة
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-extrabold bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-full">
+                            كشف
+                          </span>
+                        )}
                       </div>
                       <span className="text-xs font-bold bg-clinic-mint/20 px-2 py-1 rounded-lg text-clinic-text">
                         {visit.amount_paid} ج.م
@@ -416,7 +429,18 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
         <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto p-6 text-right shadow-2xl border border-clinic-border flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-lg font-bold text-clinic-teal">تفاصيل الزيارة</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-clinic-teal">تفاصيل الزيارة</h3>
+                {selectedVisit.visit_type === 'followup' ? (
+                  <span className="text-[10px] font-extrabold bg-purple-50 border border-purple-200 text-purple-700 px-2 py-0.5 rounded-full">
+                    استشارة
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-extrabold bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
+                    كشف
+                  </span>
+                )}
+              </div>
               <button onClick={() => setSelectedVisit(null)} className="p-1 hover:bg-gray-100 rounded-full">
                 <X size={20} />
               </button>
@@ -571,6 +595,33 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
 
             <div className="flex flex-col gap-3 text-sm">
               <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">حالة المريض (هل هو كشف جديد أم استشارة؟)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingVisit({ ...editingVisit, visit_type: 'checkup', amount_paid: 200 })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      editingVisit.visit_type !== 'followup'
+                        ? 'bg-clinic-teal text-white border-clinic-teal shadow-xs'
+                        : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                    }`}
+                  >
+                    كشف جديد (200 ج.م)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingVisit({ ...editingVisit, visit_type: 'followup', amount_paid: 70 })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      editingVisit.visit_type === 'followup'
+                        ? 'bg-clinic-teal text-white border-clinic-teal shadow-xs'
+                        : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                    }`}
+                  >
+                    استشارة متابعة (70 ج.م)
+                  </button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">المبلغ المدفوع (ج.م)</label>
                 <input
                   type="number"
@@ -627,6 +678,39 @@ export default function PatientProfileScreen({ db, patientId, onUpdateDb, curren
             <p className="text-xs text-gray-400">سيتم ربط الزيارة تلقائياً بملف المريض: {patient.full_name}</p>
 
             <div className="flex flex-col gap-3 text-sm">
+              <div>
+                <label className="block text-xs font-bold text-clinic-text mb-1.5">حالة المريض (هل هو كشف جديد أم استشارة؟) *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewVisitType('checkup');
+                      setNewVisitAmount('200');
+                    }}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      newVisitType === 'checkup'
+                        ? 'bg-clinic-teal text-white border-clinic-teal shadow-xs'
+                        : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                    }`}
+                  >
+                    كشف جديد (200 ج.م)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewVisitType('followup');
+                      setNewVisitAmount('70');
+                    }}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      newVisitType === 'followup'
+                        ? 'bg-clinic-teal text-white border-clinic-teal shadow-xs'
+                        : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                    }`}
+                  >
+                    استشارة متابعة (70 ج.م)
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-clinic-text mb-1">المبلغ المدفوع (ج.م) *</label>
                 <input

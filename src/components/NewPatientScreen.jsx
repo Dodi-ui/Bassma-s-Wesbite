@@ -19,7 +19,8 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
   const [age, setAge] = useState('');
   const [village, setVillage] = useState('');
   const [phone, setPhone] = useState('');
-  const [amountPaid, setAmountPaid] = useState('250'); // Default checkup fee as helper
+  const [amountPaid, setAmountPaid] = useState('200'); // Default checkup fee as helper
+  const [visitType, setVisitType] = useState('checkup'); // 'checkup' or 'followup'
 
   // Loading States
   const [isSaving, setIsSaving] = useState(false);
@@ -57,6 +58,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
         date: todayStr,
         day_status: 'open',
         status: 'waiting', // Mark as waiting in the doctor's queue!
+        visit_type: visitType,
         complaint_text: '',
         complaint_audio_url: '',
         diagnosis: '',
@@ -91,7 +93,8 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
       setAge('');
       setVillage('');
       setPhone('');
-      setAmountPaid('250');
+      setAmountPaid('200');
+      setVisitType('checkup');
 
       if (!stayOnForm) {
         onNavigate('home');
@@ -171,7 +174,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
                 type="button"
                 onClick={() => {
                   setVisitType('checkup');
-                  setAmountPaid('250');
+                  setAmountPaid('200');
                 }}
                 className={`py-3 px-4 rounded-xl border text-sm font-bold transition-all ${
                   visitType === 'checkup'
@@ -179,13 +182,13 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
                     : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
                 }`}
               >
-                كشف جديد (250 ج.م)
+                كشف جديد (200 ج.م)
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setVisitType('followup');
-                  setAmountPaid('50');
+                  setAmountPaid('70');
                 }}
                 className={`py-3 px-4 rounded-xl border text-sm font-bold transition-all ${
                   visitType === 'followup'
@@ -193,7 +196,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
                     : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
                 }`}
               >
-                استشارة متابعة (50 ج.م)
+                استشارة متابعة (70 ج.م)
               </button>
             </div>
           </div>
@@ -215,7 +218,7 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
                 <input
                   type="number"
                   step="0.01"
-                  placeholder="250.00"
+                  placeholder="200.00"
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(e.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-clinic-border focus:border-clinic-teal focus:outline-none text-base font-extrabold text-left"

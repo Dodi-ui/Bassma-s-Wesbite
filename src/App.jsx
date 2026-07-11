@@ -24,11 +24,26 @@ import ReportsScreen from './components/ReportsScreen';
 import SettingsScreen from './components/SettingsScreen';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [currentTab, setCurrentTab] = useState('home'); // home, search, reports, settings
-  const [activeScreen, setActiveScreen] = useState('home'); // home, search, reports, settings, new-patient, patient-profile, consultation
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
-  const [selectedVisitId, setSelectedVisitId] = useState(null); // Doctor's active consultation
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinic_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [currentTab, setCurrentTab] = useState(() => {
+    return localStorage.getItem('clinic_tab') || 'home';
+  });
+  const [activeScreen, setActiveScreen] = useState(() => {
+    return localStorage.getItem('clinic_screen') || 'home';
+  });
+  const [selectedPatientId, setSelectedPatientId] = useState(() => {
+    return localStorage.getItem('clinic_selected_patient_id') || null;
+  });
+  const [selectedVisitId, setSelectedVisitId] = useState(() => {
+    return localStorage.getItem('clinic_selected_visit_id') || null;
+  });
 
   // Database and Sync States
   const [db, setDb] = useState(null);
@@ -36,6 +51,39 @@ export default function App() {
   const [conflictInfo, setConflictInfo] = useState(null); // { localVer, serverVer, serverDb }
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Save sessions & routing to localStorage on changes
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('clinic_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('clinic_user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('clinic_tab', currentTab);
+  }, [currentTab]);
+
+  useEffect(() => {
+    localStorage.setItem('clinic_screen', activeScreen);
+  }, [activeScreen]);
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      localStorage.setItem('clinic_selected_patient_id', selectedPatientId);
+    } else {
+      localStorage.removeItem('clinic_selected_patient_id');
+    }
+  }, [selectedPatientId]);
+
+  useEffect(() => {
+    if (selectedVisitId) {
+      localStorage.setItem('clinic_selected_visit_id', selectedVisitId);
+    } else {
+      localStorage.removeItem('clinic_selected_visit_id');
+    }
+  }, [selectedVisitId]);
 
   // Initialize DB and sync listeners
   useEffect(() => {
@@ -229,6 +277,15 @@ export default function App() {
   const handleLogout = () => {
     if (window.confirm("هل تريد تسجيل الخروج؟")) {
       setCurrentUser(null);
+      setCurrentTab('home');
+      setActiveScreen('home');
+      setSelectedPatientId(null);
+      setSelectedVisitId(null);
+      localStorage.removeItem('clinic_user');
+      localStorage.removeItem('clinic_tab');
+      localStorage.removeItem('clinic_screen');
+      localStorage.removeItem('clinic_selected_patient_id');
+      localStorage.removeItem('clinic_selected_visit_id');
     }
   };
 
