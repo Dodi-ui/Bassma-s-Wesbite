@@ -73,7 +73,7 @@ export default function SearchScreen({ db, onNavigate, setSelectedPatientId }) {
     if (sortedPatients.length > 0) {
       signAudios();
     }
-  }, [sortedPatients.length, db]);
+  }, [searchQuery, filterType, db]);
 
   const handlePatientTap = (patientId) => {
     setSelectedPatientId(patientId);
