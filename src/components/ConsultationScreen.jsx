@@ -75,6 +75,7 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
   // Voice recording handlers
   const handleStartRecording = async () => {
     setTempTranscribedText('');
+    tempTranscribedTextRef.current = ''; // Clear ref at start of each new recording
     setGoogleTranscription('');
     setAssemblyAiTranscription('');
     setAssemblyAiError('');
@@ -182,6 +183,7 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
     setAudioBlob(null);
     setHasRecordedVoice(false);
     setTempTranscribedText('');
+    tempTranscribedTextRef.current = ''; // Also reset the ref
     setGoogleTranscription('');
     setAssemblyAiTranscription('');
     setAssemblyAiError('');
