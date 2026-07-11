@@ -28,6 +28,7 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [hasRecordedVoice, setHasRecordedVoice] = useState(false);
   const [tempTranscribedText, setTempTranscribedText] = useState('');
+  const tempTranscribedTextRef = useRef(''); // Ref to avoid stale closure in handleStopRecording
 
   // Photo States
   const [photos, setPhotos] = useState([]); // Array of { file, previewUrl }
@@ -85,6 +86,7 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
       onSpeechResult: (text) => {
         setTempTranscribedText(text);
         setGoogleTranscription(text);
+        tempTranscribedTextRef.current = text; // Always keep ref in sync
       },
       onVolumeChange: (vol) => {
         setVolumeLevel(vol);
@@ -110,22 +112,23 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
       setHasRecordedVoice(true);
 
       // If speech recognition got text, set it
-      if (tempTranscribedText) {
-        setGoogleTranscription(tempTranscribedText);
-        setComplaintText(tempTranscribedText); // Default to Google first
+      if (latestTranscript) {
+        setGoogleTranscription(latestTranscript);
+        setComplaintText(latestTranscript); // Default to Google first
       }
 
       // Check if AssemblyAI key is configured to run AI symptom analysis using text
       const assemblyKey = db.settings?.voice_api_key;
-
-      if (assemblyKey && tempTranscribedText && tempTranscribedText.trim().length > 10) {
+      // Use ref value to avoid stale closure — guaranteed to have latest speech text
+      const latestTranscript = tempTranscribedTextRef.current;
+      if (assemblyKey && latestTranscript && latestTranscript.trim().length > 10) {
         setIsAssemblyAiLoading(true);
         setAssemblyAiError('');
         
         try {
           // Use LLM Gateway directly with the browser-transcribed text
           // This completely bypasses the CORS-blocked audio upload to AssemblyAI
-          const transcriptText = tempTranscribedText;
+          const transcriptText = latestTranscript;
           const prompt = "This is a transcribed doctor-patient medical consultation in Arabic. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
 
           const llmResponse = await fetch("https://llm-gateway.assemblyai.com/v1/chat/completions", {
@@ -168,7 +171,7 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         } finally {
           setIsAssemblyAiLoading(false);
         }
-      } else if (assemblyKey && (!tempTranscribedText || tempTranscribedText.trim().length <= 10)) {
+      } else if (assemblyKey && (!latestTranscript || latestTranscript.trim().length <= 10)) {
         // Browser transcription was empty — cannot run AI analysis
         setAssemblyAiError("لم يُكتشف نص كافٍ من الميكروفون لتشغيل تحليل الذكاء الاصطناعي.");
       }
