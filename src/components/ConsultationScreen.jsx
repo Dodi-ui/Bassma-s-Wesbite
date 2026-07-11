@@ -119,7 +119,8 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
       }
 
       // Check if AssemblyAI key is configured to run AI symptom analysis using text
-      const assemblyKey = db.settings?.voice_api_key;
+      // Uses the user settings key, with a direct hardcoded fallback to ensure it always works
+      const assemblyKey = db.settings?.voice_api_key || "b46a6b8b979e4715b34c7264e98bda6d";
       // Use ref value to avoid stale closure — guaranteed to have latest speech text
       const latestTranscript = tempTranscribedTextRef.current;
       if (assemblyKey && latestTranscript && latestTranscript.trim().length > 10) {
@@ -357,9 +358,9 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         <div className="bg-clinic-card border border-clinic-border rounded-2xl p-4 shadow-sm flex flex-col gap-4 transition-all duration-200 hover:shadow-md">
           <h2 className="text-sm font-bold text-gray-500 border-b border-gray-100 pb-2">🎙️ تسجيل شكوى المريض صوتياً</h2>
           
-          {(!db.settings?.voice_api_key || !db.settings?.supabase_url) && (
+          {!db.settings?.supabase_url && (
             <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3.5 text-xs text-yellow-800 text-right leading-relaxed">
-              ⚠️ <strong>تنبيه للمساعد / الطبيب:</strong> لم يتم إدخال مفتاح الذكاء الاصطناعي (AssemblyAI API Key) أو إعدادات السحابة في صفحة الإعدادات. لن يعمل تفريغ الصوت وتلخيص الشكوى بالذكاء الاصطناعي تلقائياً حتى يتم إدخالهما.
+              ⚠️ <strong>تنبيه للمساعد / الطبيب:</strong> لم يتم إدخال إعدادات السحابة في صفحة الإعدادات. يرجى تهيئتها لضمان حفظ ومزامنة التسجيلات الصوتية والصور.
             </div>
           )}
           
