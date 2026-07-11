@@ -108,6 +108,9 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
     setIsProcessingVoice(false);
 
     if (result) {
+      // Use ref value to avoid stale closure — guaranteed to have latest speech text
+      const latestTranscript = tempTranscribedTextRef.current;
+
       setAudioBlob(result.blob);
       setAudioExt(result.extension);
       setHasRecordedVoice(true);
@@ -121,8 +124,6 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
       // Check if AssemblyAI key is configured to run AI symptom analysis using text
       // Uses the user settings key, with a direct hardcoded fallback to ensure it always works
       const assemblyKey = db.settings?.voice_api_key || "b46a6b8b979e4715b34c7264e98bda6d";
-      // Use ref value to avoid stale closure — guaranteed to have latest speech text
-      const latestTranscript = tempTranscribedTextRef.current;
       if (assemblyKey && latestTranscript && latestTranscript.trim().length > 10) {
         setIsAssemblyAiLoading(true);
         setAssemblyAiError('');
