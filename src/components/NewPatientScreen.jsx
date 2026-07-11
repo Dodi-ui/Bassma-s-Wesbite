@@ -164,6 +164,40 @@ export default function NewPatientScreen({ db, onUpdateDb, currentUser, onNaviga
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-bold text-clinic-text mb-1.5">حالة المريض (هل هو كشف جديد أم استشارة؟) *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setVisitType('checkup');
+                  setAmountPaid('250');
+                }}
+                className={`py-3 px-4 rounded-xl border text-sm font-bold transition-all ${
+                  visitType === 'checkup'
+                    ? 'bg-clinic-teal text-white border-clinic-teal shadow-md'
+                    : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                }`}
+              >
+                كشف جديد (250 ج.م)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisitType('followup');
+                  setAmountPaid('50');
+                }}
+                className={`py-3 px-4 rounded-xl border text-sm font-bold transition-all ${
+                  visitType === 'followup'
+                    ? 'bg-clinic-teal text-white border-clinic-teal shadow-md'
+                    : 'bg-white text-clinic-text border-clinic-border hover:bg-gray-50'
+                }`}
+              >
+                استشارة متابعة (50 ج.م)
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-clinic-text mb-1.5">رقم التلفون (اختياري)</label>
