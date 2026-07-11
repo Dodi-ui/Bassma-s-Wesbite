@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight, Mic, Camera, Trash2, Check, RefreshCw, X, Loader2, User, Phone, MapPin, DollarSign, Calendar, Sparkles } from 'lucide-react';
 import { VoiceRecorderService } from '../services/voiceRecorder';
 import { uploadFile, getSignedUrl } from '../services/supabaseService';
-import { transcribeWithAssemblyAi, queryLeMurTask } from '../services/assemblyAiService';
+import { transcribeWithAssemblyAi, queryLeMurTask, queryLlmGateway } from '../services/assemblyAiService';
 
 const recorderService = new VoiceRecorderService();
 
@@ -129,40 +129,10 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         setAssemblyAiError('');
         
         try {
-          // Use LLM Gateway directly with the browser-transcribed text
-          // This completely bypasses the CORS-blocked audio upload to AssemblyAI
-          const transcriptText = latestTranscript;
+          // Use LLM Gateway with the browser-transcribed text (routed through CORS proxy)
           const prompt = "This is a transcribed doctor-patient medical consultation in Arabic. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
 
-          const llmResponse = await fetch("https://llm-gateway.assemblyai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "authorization": assemblyKey,
-              "content-type": "application/json"
-            },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-6",
-              messages: [
-                {
-                  role: "system",
-                  content: "You are an AI medical assistant for a clinic. Analyze the provided doctor-patient consultation transcription and answer the user prompt concisely and professionally."
-                },
-                {
-                  role: "user",
-                  content: `Here is the transcribed Arabic consultation:\n"${transcriptText}"\n\nTask: ${prompt}`
-                }
-              ],
-              max_tokens: 500
-            })
-          });
-
-          if (!llmResponse.ok) {
-            const errData = await llmResponse.json().catch(() => ({}));
-            throw new Error(errData.error?.message || "فشل الاتصال بخدمة LLM Gateway");
-          }
-
-          const llmData = await llmResponse.json();
-          const aiSummary = llmData.choices?.[0]?.message?.content || "";
+          const aiSummary = await queryLlmGateway(assemblyKey, latestTranscript, prompt);
           
           if (aiSummary) {
             setAssemblyAiTranscription(aiSummary);

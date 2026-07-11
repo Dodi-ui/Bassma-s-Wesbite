@@ -138,4 +138,43 @@ export async function queryLeMurTask(apiKey, transcriptId, prompt) {
   return data.choices?.[0]?.message?.content || "فشل تحليل المحادثة";
 }
 
+/**
+ * Calls AssemblyAI's LLM Gateway using a CORS proxy.
+ */
+export async function queryLlmGateway(apiKey, text, prompt) {
+  if (!apiKey) throw new Error("AssemblyAI API key is missing");
+  if (!text) throw new Error("No text provided for analysis");
+
+  const response = await fetchWithCorsProxy("https://llm-gateway.assemblyai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "authorization": apiKey,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI medical assistant for a clinic. Analyze the provided doctor-patient consultation transcription and answer the user prompt concisely and professionally."
+        },
+        {
+          role: "user",
+          content: `Here is the transcribed Arabic consultation:\n"${text}"\n\nTask: ${prompt}`
+        }
+      ],
+      max_tokens: 500
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || errorData.error || "فشل تحليل المحادثة بالذكاء الاصطناعي");
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "فشل تحليل المحادثة";
+}
+
+
 
