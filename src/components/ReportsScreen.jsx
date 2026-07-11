@@ -371,12 +371,12 @@ export default function ReportsScreen({ db, currentUser }) {
 
             {/* Quick Metrics (Flexbox for html2canvas compatibility) */}
             <div className="flex gap-3">
-              <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
+              <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
                 <span className="block text-[10px] text-gray-400 font-bold mb-0.5">إجمالي الحالات</span>
                 <span className="text-xl font-black text-clinic-teal">{dailyPatientsCount}</span>
                 <span className="block text-[9px] text-gray-400 font-bold mt-0.5">({dailyCheckupsCount} كشف · {dailyFollowupsCount} استشارة)</span>
               </div>
-              <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
+              <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2 text-center print:bg-white print:border-gray-200">
                 <span className="block text-[10px] text-gray-400 font-bold mb-0.5">إجمالي الإيراد</span>
                 <span className="text-xl font-black text-clinic-teal">{dailyTotalRevenue} ج.م</span>
               </div>
@@ -401,7 +401,7 @@ export default function ReportsScreen({ db, currentUser }) {
                         {dailyLeft.map((v, i) => {
                           const patient = db.patients?.find(p => p.id === v.patient_id);
                           return (
-                            <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
+                            <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 print:border-gray-100">
                               <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">
                                 {patient?.full_name || 'غير معروف'} {v.visit_type === 'followup' ? '(س)' : '(ك)'}
                               </td>
@@ -429,7 +429,7 @@ export default function ReportsScreen({ db, currentUser }) {
                           {dailyRight.map((v, i) => {
                             const patient = db.patients?.find(p => p.id === v.patient_id);
                             return (
-                              <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
+                              <tr key={v.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 print:border-gray-100">
                                 <td className="py-1 px-1.5 font-semibold text-clinic-text truncate max-w-[80px]">
                                   {patient?.full_name || 'غير معروف'} {v.visit_type === 'followup' ? '(س)' : '(ك)'}
                                 </td>
@@ -474,22 +474,22 @@ export default function ReportsScreen({ db, currentUser }) {
             {/* Monthly Metrics (Flexbox for html2canvas compatibility) */}
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-2.5">
-                <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
+                <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">أيام العمل المفتوحة</span>
                   <span className="text-lg font-black text-clinic-teal">{openDaysCount}</span>
                 </div>
-                <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
+                <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">متوسط المرضى يومياً</span>
                   <span className="text-lg font-black text-clinic-teal">{avgPatientsPerDay}</span>
                 </div>
               </div>
               <div className="flex gap-2.5">
-                <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
+                <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">إجمالي الحالات</span>
                   <span className="text-lg font-black text-clinic-teal">{monthlyPatientsCount}</span>
                   <span className="block text-[8px] text-gray-400 font-bold mt-0.5">({monthlyCheckupsCount} كشف · {monthlyFollowupsCount} استشارة)</span>
                 </div>
-                <div className="flex-1 border border-gray-100 bg-gray-50/50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
+                <div className="flex-1 border border-gray-100 bg-gray-50 rounded-xl p-2.5 text-center print:bg-white print:border-gray-200">
                   <span className="block text-[9px] text-gray-400 font-bold mb-0.5">إجمالي الدخل</span>
                   <span className="text-lg font-black text-clinic-teal">{monthlyTotalRevenue} ج.م</span>
                 </div>
@@ -515,7 +515,7 @@ export default function ReportsScreen({ db, currentUser }) {
                         {monthlyLeft.map(date => {
                           const item = monthlyBreakdown[date];
                           return (
-                            <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
+                            <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 print:border-gray-100">
                               <td className="py-1 px-1.5 font-semibold text-clinic-text">{new Date(date).toLocaleDateString('ar-EG', {month: 'numeric', day: 'numeric'})}</td>
                               <td className="py-1 px-1.5 text-gray-500">{item.patients} ح ({item.checkups || 0}ك·{item.followups || 0}س)</td>
                               <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{item.revenue} ج.م</td>
@@ -541,7 +541,7 @@ export default function ReportsScreen({ db, currentUser }) {
                           {monthlyRight.map(date => {
                             const item = monthlyBreakdown[date];
                             return (
-                              <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 print:border-gray-100">
+                              <tr key={date} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50 print:border-gray-100">
                                 <td className="py-1 px-1.5 font-semibold text-clinic-text">{new Date(date).toLocaleDateString('ar-EG', {month: 'numeric', day: 'numeric'})}</td>
                                 <td className="py-1 px-1.5 text-gray-500">{item.patients} ح ({item.checkups || 0}ك·{item.followups || 0}س)</td>
                                 <td className="py-1 px-1.5 text-left font-bold text-clinic-teal">{item.revenue} ج.م</td>
