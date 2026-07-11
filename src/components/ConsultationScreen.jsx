@@ -115,37 +115,62 @@ export default function ConsultationScreen({ db, visitId, onUpdateDb, currentUse
         setComplaintText(tempTranscribedText); // Default to Google first
       }
 
-      // Check if AssemblyAI key is configured in settings to run dual transcription
+      // Check if AssemblyAI key is configured to run AI symptom analysis using text
       const assemblyKey = db.settings?.voice_api_key;
-      const hasSupabase = db.settings?.supabase_url;
 
-      if (assemblyKey && hasSupabase) {
+      if (assemblyKey && tempTranscribedText && tempTranscribedText.trim().length > 10) {
         setIsAssemblyAiLoading(true);
         setAssemblyAiError('');
         
         try {
-          // 1. Upload temporary audio to Supabase to get an public/signed URL
-          const tempPath = `temp_transcription/${visit.id}_${Date.now()}.${result.extension}`;
-          await uploadFile('voice-memos', tempPath, result.blob);
+          // Use LLM Gateway directly with the browser-transcribed text
+          // This completely bypasses the CORS-blocked audio upload to AssemblyAI
+          const transcriptText = tempTranscribedText;
+          const prompt = "This is a transcribed doctor-patient medical consultation in Arabic. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
+
+          const llmResponse = await fetch("https://llm-gateway.assemblyai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "authorization": assemblyKey,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-6",
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an AI medical assistant for a clinic. Analyze the provided doctor-patient consultation transcription and answer the user prompt concisely and professionally."
+                },
+                {
+                  role: "user",
+                  content: `Here is the transcribed Arabic consultation:\n"${transcriptText}"\n\nTask: ${prompt}`
+                }
+              ],
+              max_tokens: 500
+            })
+          });
+
+          if (!llmResponse.ok) {
+            const errData = await llmResponse.json().catch(() => ({}));
+            throw new Error(errData.error?.message || "فشل الاتصال بخدمة LLM Gateway");
+          }
+
+          const llmData = await llmResponse.json();
+          const aiSummary = llmData.choices?.[0]?.message?.content || "";
           
-          // 2. Get signed URL
-          const signedUrl = await getSignedUrl('voice-memos', tempPath);
-          
-          // 3. Request AssemblyAI transcription
-          const transcriptionResult = await transcribeWithAssemblyAi(assemblyKey, signedUrl);
-          
-          // 4. Request LeMUR AI to analyze the conversation and extract complaints / symptoms
-          const prompt = "This is a recording of a doctor-patient medical consultation. Identify what the patient is complaining about and aching from. Summarize it clearly, concisely, and professionally in simple Egyptian Arabic (العامية المصرية) in one paragraph. Write the clinical complaints and symptoms directly, without introducing yourself or writing any introductory/meta remarks.";
-          const aiSummary = await queryLeMurTask(assemblyKey, transcriptionResult.id, prompt);
-          
-          setAssemblyAiTranscription(aiSummary);
-          setComplaintText(aiSummary); // Automatically write it down as active complaint text!
+          if (aiSummary) {
+            setAssemblyAiTranscription(aiSummary);
+            setComplaintText(aiSummary); // Auto-fill the complaint text with AI analysis!
+          }
         } catch (err) {
-          console.error("AssemblyAI background transcription/analysis failed:", err);
-          setAssemblyAiError("فشلت مزامنة الذكاء الاصطناعي AssemblyAI. تم الاعتماد على مفرغ المتصفح.");
+          console.error("LLM Gateway symptom analysis failed:", err);
+          setAssemblyAiError("فشل تحليل الذكاء الاصطناعي. تم الاعتماد على تفريغ المتصفح.");
         } finally {
           setIsAssemblyAiLoading(false);
         }
+      } else if (assemblyKey && (!tempTranscribedText || tempTranscribedText.trim().length <= 10)) {
+        // Browser transcription was empty — cannot run AI analysis
+        setAssemblyAiError("لم يُكتشف نص كافٍ من الميكروفون لتشغيل تحليل الذكاء الاصطناعي.");
       }
     }
   };
