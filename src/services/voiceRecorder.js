@@ -90,8 +90,8 @@ export class VoiceRecorderService {
         }, 100);
       }
 
-      // 5. Start MediaRecorder
-      this.mediaRecorder.start();
+      // 5. Start MediaRecorder with 1000ms timeslice for stable chunk collection
+      this.mediaRecorder.start(1000);
 
     } catch (err) {
       console.error("Failed to start voice recording:", err);

@@ -95,9 +95,11 @@ export default function ReportsScreen({ db, currentUser }) {
 
     try {
       const canvas = await html2canvas(element, {
-        scale: 2, // High resolution
-        useCORS: true,
-        backgroundColor: '#ffffff'
+        scale: 2,
+        useCORS: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false
       });
 
       element.style.cssText = originalStyle; // Restore styles
