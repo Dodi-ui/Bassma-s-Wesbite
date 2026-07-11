@@ -1,17 +1,16 @@
-const CACHE_NAME = 'bassma-clinic-cache-v8';
+const CACHE_NAME = 'bassma-clinic-cache-v10';
 
 self.addEventListener('install', (event) => {
-  // Force activation immediately
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  // Claim clients and clear old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -21,17 +20,21 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only intercept GET requests
   if (event.request.method !== 'GET') return;
 
   const url = event.request.url;
 
-  // Don't intercept Telegram API, Supabase API or database uploads
-  if (url.includes('telegram.org') || url.includes('supabase.co')) {
+  // Never intercept API calls or external proxy domains
+  if (
+    url.includes('telegram.org') || 
+    url.includes('supabase.co') || 
+    url.includes('allorigins.win') || 
+    url.includes('corsproxy.io') ||
+    url.includes('codetabs.com')
+  ) {
     return;
   }
 
-  // Intercept local assets and Google fonts
   const isLocalAsset = url.startsWith(self.location.origin);
   const isGoogleFont = url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com');
 
@@ -39,9 +42,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Stale-While-Revalidate Strategy for all local assets & fonts
+  // Fast loading from cache, silent update in the background
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Stale-While-Revalidate Strategy
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
@@ -51,7 +55,7 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch((err) => {
-        console.warn("Asset fetch failed (offline):", err);
+        console.warn('[SW] Fetch failed (offline):', err);
       });
 
       return cachedResponse || fetchPromise;
