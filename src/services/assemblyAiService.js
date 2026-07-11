@@ -20,7 +20,7 @@ export async function startAssemblyAiTranscription(apiKey, audioUrl) {
     body: JSON.stringify({
       audio_url: audioUrl,
       language_code: "ar", // Arabic language support
-      speech_model: "best" // Use best model for accuracy
+      speech_models: ["universal-3-5-pro", "universal-2"] // Flagship model and fallback
     })
   });
 
@@ -65,7 +65,7 @@ export async function transcribeWithAssemblyAi(apiKey, audioUrl, onProgress) {
 
     if (onProgress) onProgress("processing");
 
-    // Poll every 1.5 seconds
+    // Poll every 1500ms
     return new Promise((resolve, reject) => {
       const interval = setInterval(async () => {
         try {
@@ -91,31 +91,51 @@ export async function transcribeWithAssemblyAi(apiKey, audioUrl, onProgress) {
 }
 
 /**
- * Runs a LeMUR task to ask LLM about the transcript (extract symptoms, complaints, etc.)
+ * Runs a task on LLM Gateway to analyze the transcript (extract symptoms, complaints, etc.)
+ * Replaces the sunset LeMUR API.
  */
 export async function queryLeMurTask(apiKey, transcriptId, prompt) {
   if (!apiKey) throw new Error("AssemblyAI API key is missing");
   if (!transcriptId) throw new Error("Transcript ID is missing");
 
-  const response = await fetchWithCorsProxy("https://api.assemblyai.com/v2/lemur/task", {
+  // 1. Get the transcription text first by calling status endpoint
+  const transcript = await pollAssemblyAiStatus(apiKey, transcriptId);
+  const transcriptText = transcript.text || "";
+
+  if (!transcriptText) {
+    throw new Error("لا يوجد نص للتفريغ لتحليله");
+  }
+
+  // 2. Call the LLM Gateway
+  const response = await fetchWithCorsProxy("https://llm-gateway.assemblyai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "authorization": apiKey,
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      transcript_ids: [transcriptId],
-      prompt: prompt,
-      final_model: "default"
+      model: "claude-sonnet-4-6",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI medical assistant for a clinic. Analyze the provided doctor-patient audio transcription and answer the user prompt concisely and professionally."
+        },
+        {
+          role: "user",
+          content: `Here is the transcribed text of the consultation:\n"${transcriptText}"\n\nTask: ${prompt}`
+        }
+      ],
+      max_tokens: 1000
     })
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "فشل تحليل المحادثة بالذكاء الاصطناعي");
+    throw new Error(errorData.error?.message || errorData.error || "فشل تحليل المحادثة بالذكاء الاصطناعي عبر بوابة LLM");
   }
 
   const data = await response.json();
-  return data.response; // returns LLM text
+  return data.choices?.[0]?.message?.content || "فشل تحليل المحادثة";
 }
+
 
