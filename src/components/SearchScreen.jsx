@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, User, MapPin, Calendar, ArrowLeft } from 'lucide-react';
+import { getSignedUrl } from '../services/supabaseService';
 
 export default function SearchScreen({ db, onNavigate, setSelectedPatientId }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +49,31 @@ export default function SearchScreen({ db, onNavigate, setSelectedPatientId }) {
     
     return new Date(visitB.date) - new Date(visitA.date);
   });
+
+  const [signedAudios, setSignedAudios] = useState({});
+
+  // Sign latest visit audio URLs for display in search cards
+  useEffect(() => {
+    const signAudios = async () => {
+      const urls = {};
+      for (const patient of sortedPatients) {
+        const latestVisit = getLatestVisit(patient.id);
+        if (latestVisit?.complaint_audio_url && db.settings?.supabase_url) {
+          try {
+            const signed = await getSignedUrl('voice-memos', latestVisit.complaint_audio_url);
+            urls[latestVisit.id] = signed;
+          } catch (e) {
+            console.error("Failed to sign audio in search list:", e);
+          }
+        }
+      }
+      setSignedAudios(urls);
+    };
+
+    if (sortedPatients.length > 0) {
+      signAudios();
+    }
+  }, [sortedPatients.length, db]);
 
   const handlePatientTap = (patientId) => {
     setSelectedPatientId(patientId);
@@ -124,12 +150,20 @@ export default function SearchScreen({ db, onNavigate, setSelectedPatientId }) {
                 </div>
 
                 {latestVisit ? (
-                  <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
-                    <span className="truncate max-w-[180px]">الشكوى: {latestVisit.complaint_text || 'لا يوجد'}</span>
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <Calendar size={12} />
-                      آخر زيارة: {new Date(latestVisit.date).toLocaleDateString('ar-EG')}
-                    </span>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-2 text-xs text-gray-400">
+                    <div className="flex justify-between items-center w-full">
+                      <span className="truncate max-w-[180px] text-clinic-text font-medium">الشكوى: {latestVisit.complaint_text || 'لا يوجد'}</span>
+                      <span className="flex items-center gap-1 text-[11px] flex-shrink-0">
+                        <Calendar size={12} />
+                        آخر زيارة: {new Date(latestVisit.date).toLocaleDateString('ar-EG')}
+                      </span>
+                    </div>
+                    {latestVisit.complaint_audio_url && signedAudios[latestVisit.id] && (
+                      <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[10px] font-bold text-clinic-teal flex-shrink-0">🎙️ الشكوى الصوتية:</span>
+                        <audio src={signedAudios[latestVisit.id]} controls className="h-6 w-36 max-w-full text-xs" />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400">

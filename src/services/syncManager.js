@@ -160,6 +160,7 @@ export async function initSyncManager() {
       telegram_chat_id: DEFAULT_DB_SCHEMA.settings.telegram_chat_id,
       supabase_url: DEFAULT_DB_SCHEMA.settings.supabase_url,
       supabase_anon_key: DEFAULT_DB_SCHEMA.settings.supabase_anon_key,
+      voice_api_key: localDb.settings?.voice_api_key || DEFAULT_DB_SCHEMA.settings.voice_api_key,
     };
 
     isDirty = cachedDirty === true;

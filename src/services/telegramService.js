@@ -15,7 +15,7 @@ export const DEFAULT_DB_SCHEMA = {
     supabase_url: "https://nfcobdkkvicsbzusyxtm.supabase.co",
     supabase_anon_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mY29iZGtrdmljc2J6dXN5eHRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzQ3NDAsImV4cCI6MjA5NzkxMDc0MH0.UTR5dNQQUq4c5o3Gvn5hDL-BAfcfFQu3Fm63x2zNJLU",
     voice_api_provider: "browser",
-    voice_api_key: "",
+    voice_api_key: "b46a6b8b979e4715b34c7264e98bda6d",
     clinic_pin: "1234"
   },
   days: [],
