@@ -66,6 +66,16 @@ function rememberServerMeta(serverMeta) {
 }
 
 async function persistLocalDb() {
+  if (localDb) {
+    localDb.settings = {
+      ...(localDb.settings || {}),
+      telegram_bot_token: DEFAULT_DB_SCHEMA.settings.telegram_bot_token,
+      telegram_chat_id: DEFAULT_DB_SCHEMA.settings.telegram_chat_id,
+      supabase_url: DEFAULT_DB_SCHEMA.settings.supabase_url,
+      supabase_anon_key: DEFAULT_DB_SCHEMA.settings.supabase_anon_key,
+      voice_api_key: DEFAULT_DB_SCHEMA.settings.voice_api_key,
+    };
+  }
   await localforage.setItem('clinic_db', localDb);
   await localforage.setItem('is_dirty', isDirty);
   await localforage.setItem('last_synced_file_id', lastSyncedFileId);
@@ -107,6 +117,16 @@ export function subscribeToConflict(listener) {
  * Gets the current active database instance
  */
 export function getDb() {
+  if (localDb) {
+    localDb.settings = {
+      ...(localDb.settings || {}),
+      telegram_bot_token: DEFAULT_DB_SCHEMA.settings.telegram_bot_token,
+      telegram_chat_id: DEFAULT_DB_SCHEMA.settings.telegram_chat_id,
+      supabase_url: DEFAULT_DB_SCHEMA.settings.supabase_url,
+      supabase_anon_key: DEFAULT_DB_SCHEMA.settings.supabase_anon_key,
+      voice_api_key: DEFAULT_DB_SCHEMA.settings.voice_api_key,
+    };
+  }
   return localDb;
 }
 
@@ -118,8 +138,17 @@ export async function saveDbLocally(newDb, setDirty = true) {
   if (setDirty) {
     isDirty = true;
   }
-  await localforage.setItem('clinic_db', localDb);
-  await localforage.setItem('is_dirty', isDirty);
+  if (localDb) {
+    localDb.settings = {
+      ...(localDb.settings || {}),
+      telegram_bot_token: DEFAULT_DB_SCHEMA.settings.telegram_bot_token,
+      telegram_chat_id: DEFAULT_DB_SCHEMA.settings.telegram_chat_id,
+      supabase_url: DEFAULT_DB_SCHEMA.settings.supabase_url,
+      supabase_anon_key: DEFAULT_DB_SCHEMA.settings.supabase_anon_key,
+      voice_api_key: DEFAULT_DB_SCHEMA.settings.voice_api_key,
+    };
+  }
+  await persistLocalDb();
   triggerSyncStatusChange();
 }
 
