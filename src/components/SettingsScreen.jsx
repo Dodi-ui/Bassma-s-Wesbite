@@ -463,6 +463,24 @@ export default function SettingsScreen({ db, onUpdateDb, onLogout, onDbRefresh }
           </div>
         </div>
 
+        {/* Force Update / Clear Cache Section */}
+        <div className="bg-clinic-card border border-clinic-border rounded-2xl p-4 shadow-sm flex flex-col gap-4">
+          <h2 className="text-sm font-bold text-gray-500 border-b border-gray-100 pb-2 flex items-center gap-1.5">
+            <RefreshCw size={16} className="text-clinic-teal" />
+            <span>تحديث وصيانة التطبيق</span>
+          </h2>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            إذا قمت بتنزيل تحديثات جديدة أو واجهت أي مشاكل في العرض، يمكنك مسح الملفات المؤقتة (الكاش) وإجبار المتصفح على تحميل النسخة الأخيرة فوراً.
+          </p>
+          <button
+            onClick={handleForceClearCache}
+            className="py-3 px-4 bg-clinic-teal text-white font-bold rounded-xl active:scale-95 text-xs flex items-center justify-center gap-2 transition-all shadow-md hover:bg-[#095b5e] cursor-pointer"
+          >
+            <RefreshCw size={14} />
+            <span>تحديث التطبيق ومسح الكاش 🔄</span>
+          </button>
+        </div>
+
         {/* Info Card */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-3 text-xs text-blue-800 leading-relaxed shadow-sm">
           <Info size={18} className="flex-shrink-0 mt-0.5" />
@@ -477,3 +495,32 @@ export default function SettingsScreen({ db, onUpdateDb, onLogout, onDbRefresh }
     </div>
   );
 }
+
+// Helper function to clear cache
+const handleForceClearCache = async () => {
+  if (window.confirm("🔄 هل تريد إجبار التطبيق على التحديث وحذف الملفات المؤقتة القديمة (الكاش) من هذا الجهاز؟")) {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (let key of keys) {
+          await caches.delete(key);
+        }
+      }
+      localStorage.removeItem('is_dirty');
+      sessionStorage.clear();
+      
+      alert("تم مسح الملفات المؤقتة بنجاح! سيتم الآن إعادة تحميل الصفحة بالنسخة الجديدة.");
+      window.location.reload();
+    } catch (err) {
+      console.error("Force reload failed:", err);
+      window.location.reload();
+    }
+  }
+};
+

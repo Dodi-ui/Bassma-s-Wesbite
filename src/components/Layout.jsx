@@ -17,59 +17,11 @@ export default function Layout({
     { id: 'settings', label: 'إعدادات', icon: Settings }
   ];
 
-  const handleForceClearCache = async () => {
-    if (window.confirm("🔄 هل تريد إجبار التطبيق على التحديث وحذف الملفات المؤقتة القديمة (الكاش) من هذا الجهاز؟")) {
-      try {
-        // 1. Unregister all service workers
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let registration of registrations) {
-            await registration.unregister();
-          }
-        }
-        // 2. Clear PWA caches
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          for (let key of keys) {
-            await caches.delete(key);
-          }
-        }
-        // 3. Clear storage keys
-        localStorage.removeItem('is_dirty');
-        sessionStorage.clear();
-        
-        alert("تم مسح الملفات المؤقتة بنجاح! سيتم الآن إعادة تحميل الصفحة بالنسخة الجديدة.");
-        window.location.reload();
-      } catch (err) {
-        console.error("Force reload failed:", err);
-        window.location.reload();
-      }
-    }
-  };
-
   return (
     <div className="w-full max-w-xl mx-auto min-h-screen bg-clinic-bg flex flex-col relative border-x border-clinic-border shadow-lg">
       
       {/* Dynamic Status Banners at the top */}
       <div className="sticky top-0 z-20 flex flex-col w-full text-center">
-        
-        {/* Sync Info Header */}
-        {syncState.online && (
-          <div className="bg-clinic-subtle border-b border-clinic-border py-1.5 px-4 text-[10px] text-gray-500 font-semibold flex items-center justify-between shadow-xs print:hidden">
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span>مزامنة سحابية نشطة ومؤمنة</span>
-            </div>
-            <button
-              onClick={handleForceClearCache}
-              title="اضغط للتحديث وحذف كاش الهاتف"
-              className="flex items-center gap-1 text-clinic-teal font-extrabold hover:text-[#0b6b66] active:scale-95 transition-all cursor-pointer border border-clinic-teal/20 rounded px-1.5 py-0.5 bg-clinic-teal/5"
-            >
-              <RefreshCw size={10} className="text-clinic-teal" />
-              <span>تحديث التطبيق 🔄</span>
-            </button>
-          </div>
-        )}
         
         {/* Offline Banner */}
         {!syncState.online && (
